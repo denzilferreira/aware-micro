@@ -1,0 +1,45 @@
+{
+  "server" : {
+    "web": {
+      "port": 8888,
+      "ssl": [
+        {
+          "key_pem": "",
+          "cert_pem": ""
+        }
+      ]
+    },
+    "database" : {
+      "engine": "mysql",
+      "port": 3306,
+      "host": "localhost",
+      "database": "testing_micro",
+      "user": "test_user",
+      "password": "AwareP4ssword!"
+    }
+  },
+  "study" : {
+    "sensors": [
+      {
+        "setting": "",
+        "value": ""
+      }
+    ],
+    "plugins" : [
+      {
+        "plugin": "",
+        "settings" : [
+          {
+            "setting": "",
+            "value": ""
+          }
+        ]
+      }
+    ],
+    "schedulers" : [
+      {
+
+      }
+    ]
+  }
+}
