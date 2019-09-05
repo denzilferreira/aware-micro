@@ -3,6 +3,7 @@ package com.awareframework.micro
 import io.vertx.config.ConfigRetriever
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
+import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.json.JsonObject
 import io.vertx.core.net.PemKeyCertOptions
@@ -43,10 +44,10 @@ class MainVerticle : AbstractVerticle() {
       val router = Router.router(vertx)
       router.route().handler(BodyHandler.create())
 
-      router.route("/").handler { route ->
+      router.route(HttpMethod.GET,"/").handler { route ->
         route.response().putHeader("content-type", "text/html").end("AWARE Micro is running!")
       }
-      router.route("/:studyKey").handler { route ->
+      router.route(HttpMethod.GET,"/:studyKey").handler { route ->
         if (route.request().getParam("studyKey") == study.getString("studyKey")) {
           route.response().statusCode = 200
 
