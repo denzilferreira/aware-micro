@@ -38,6 +38,7 @@ dependencies {
   implementation "io.vertx:vertx-lang-kotlin:$vertxVersion"
   implementation "io.vertx:vertx-mqtt:$vertxVersion"
   implementation "io.vertx:vertx-web-templ-pebble:$vertxVersion"
+  implementation "org.slf4j:slf4j-nop:1.7.25"
 }
 
 compileKotlin {

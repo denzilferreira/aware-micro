@@ -11,16 +11,16 @@
   <div class="mdl-card__actions mdl-card--border">
     <form action="/create-account" method="post" id="create-account">
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-        <input class="mdl-textfield__input" type="text" id="user" name="user" pattern="[A-Z,a-z,0-9]*">
+        <input class="mdl-textfield__input" type="text" id="user" name="user">
         <label class="mdl-textfield__label" for="user">User</label>
-        <span>Letters and numbers only</span>
+        <span class="mdl-textfield__error">Letters and numbers only</span>
       </div>
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-        <input class="mdl-textfield__input" type="password" id="password" name="password" required>
+        <input class="mdl-textfield__input" type="password" id="password" name="password">
         <label class="mdl-textfield__label" for="password">Password</label>
       </div>
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-        <input class="mdl-textfield__input" type="email" id="email" name="email" required>
+        <input class="mdl-textfield__input" type="email" id="email" name="email">
         <label class="mdl-textfield__label" for="email">Email</label>
       </div>
       <div class="mdl-card__actions mdl-card--border">

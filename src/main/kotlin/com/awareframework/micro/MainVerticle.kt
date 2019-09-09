@@ -106,6 +106,7 @@ class MainVerticle : AbstractVerticle() {
         router.get("/").handler { request ->
           if (configStore.config.containsKey("user")) {
             //TODO ask credentials to open server
+
           } else {
             val data = JsonObject()
             data.put("title", "Step 1/4: Create account")
@@ -119,7 +120,6 @@ class MainVerticle : AbstractVerticle() {
         }
 
         router.post("/create-account").handler { request ->
-
           configStore.config
             .put("user", request.request().getParam("user"))
             .put("password", request.request().getParam("password"))
@@ -127,7 +127,7 @@ class MainVerticle : AbstractVerticle() {
 
           val data = JsonObject()
           data.put("user", configStore.config.getValue("user"))
-          data.put("title", "Step 2/4: Server information")
+          data.put("title", "Step 2/4: RESTful API")
 
           pebbleEngine.render(data, "templates/create-server.peb") { pebble ->
             if (pebble.succeeded()) {
@@ -139,10 +139,31 @@ class MainVerticle : AbstractVerticle() {
           }
         }
 
-        vertx.createHttpServer(serverOptions).requestHandler(router).listen(8000) { server ->
+        router.post("/create-server").handler { request ->
+          configStore.config
+            .put("domain", request.request().getParam("domain"))
+            .put("port", request.request().getParam("port"))
+            .put("ssl_privateKey", request.request().getParam("sslPrivate"))
+            .put("ssl_publicCert", request.request().getParam("sslPublicCert"))
+
+          val data = JsonObject()
+          data.put("user", configStore.config.getValue("user"))
+          data.put("title", "Step 3/4: Database")
+
+          pebbleEngine.render(data, "templates/create-database.peb") { pebble ->
+            if (pebble.succeeded()) {
+              request.response().statusCode = 200
+              request.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+            } else {
+              println("Failed: ${pebble.cause()}")
+            }
+          }
+        }
+
+        vertx.createHttpServer(serverOptions).requestHandler(router).listen(8080) { server ->
           if (server.succeeded()) {
             startPromise.complete()
-            println("AWARE Micro is ready to configure at https://localhost:8000")
+            println("AWARE Micro is ready to configure at https://localhost:8080")
           } else {
             println("AWARE Micro failed: ${server.cause()}")
             startPromise.fail(server.cause());
