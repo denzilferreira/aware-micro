@@ -1,0 +1,32 @@
+{% extends './common/base.peb' %}
+
+{% block content %}
+<div class="mdl-card mdl-shadow--2dp" style="width:512px; margin:auto; margin:50px auto 50px auto">
+  <div class="mdl-card__title">
+    <h2 class="mdl-card__title-text">Credentials</h2>
+  </div>
+  <div class="mdl-card__supporting-text">
+    This is the main user to your AWARE Micro server and will have full permissions to your instance.
+  </div>
+  <div class="mdl-card__actions mdl-card--border">
+    <form action="/create-account" method="post" id="create-account">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <input class="mdl-textfield__input" type="text" id="user" name="user" pattern="[A-Z,a-z,0-9]*">
+        <label class="mdl-textfield__label" for="user">User</label>
+        <span>Letters and numbers only</span>
+      </div>
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <input class="mdl-textfield__input" type="password" id="password" name="password" required>
+        <label class="mdl-textfield__label" for="password">Password</label>
+      </div>
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <input class="mdl-textfield__input" type="email" id="email" name="email" required>
+        <label class="mdl-textfield__label" for="email">Email</label>
+      </div>
+      <div class="mdl-card__actions mdl-card--border">
+        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" style="float:right" type="submit">Next</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock content %}

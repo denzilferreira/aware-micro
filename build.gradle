@@ -37,7 +37,7 @@ dependencies {
   implementation "io.vertx:vertx-sockjs-service-proxy:$vertxVersion"
   implementation "io.vertx:vertx-lang-kotlin:$vertxVersion"
   implementation "io.vertx:vertx-mqtt:$vertxVersion"
-  implementation "io.vertx:vertx-web-templ-jade:$vertxVersion"
+  implementation "io.vertx:vertx-web-templ-pebble:$vertxVersion"
 }
 
 compileKotlin {

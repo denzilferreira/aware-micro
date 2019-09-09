@@ -1,0 +1,29 @@
+{% extends './common/base.peb' %}
+
+{% block content %}
+<div class="mdl-card mdl-shadow--2dp" style="width:512px; margin:auto; margin:50px auto 50px auto">
+  <div class="mdl-card__title">
+    <h2 class="mdl-card__title-text">Server</h2>
+  </div>
+  <div class="mdl-card__supporting-text">
+    Hi {{user}}, we will now configure the URL where your server is reachable and which port to use.
+  </div>
+  <div class="mdl-card__actions mdl-card--border">
+    <form action="/create-server" method="post" id="create-server">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <input class="mdl-textfield__input" type="text" id="domain" name="domain" required>
+        <label class="mdl-textfield__label" for="domain">Domain</label>
+        <span>e.g., https://yourdomain.com</span>
+      </div>
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <input class="mdl-textfield__input" type="text" id="port" name="port" required pattern="-?[0-9]*(\.[0-9]+)?">
+        <label class="mdl-textfield__label" for="port">Port</label>
+        <span class="mdl-textfield__error">e.g., not a number, needs to be 8000 or higher</span>
+      </div>
+      <div class="mdl-card__actions mdl-card--border">
+        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" style="float:right" type="submit">Next</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock content %}
