@@ -1,5 +1,11 @@
 {% extends './common/base.peb' %}
 
+{% block style %}
+label.input-custom-file input[type=file] {
+  display: none;
+}
+{% endblock style %}
+
 {% block content %}
 <div class="mdl-card mdl-shadow--2dp" style="width:512px; margin:auto; margin:50px auto 50px auto">
   <div class="mdl-card__title">
@@ -13,21 +19,24 @@
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input class="mdl-textfield__input" type="text" id="domain" name="domain" required>
         <label class="mdl-textfield__label" for="domain">Domain</label>
-        <span>e.g., https://yourdomain.com</span>
+        <span class="mdl-textfield__error">e.g., https://yourdomain.com</span>
       </div>
       <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input class="mdl-textfield__input" type="text" id="port" name="port" required pattern="-?[0-9]*(\.[0-9]+)?">
         <label class="mdl-textfield__label" for="port">Port</label>
         <span class="mdl-textfield__error">You need a number here, usually 443 (https) or 80 (http - NOT recommended!) :)</span>
       </div>
-      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-        <input class="mdl-textfield__input" type="file" id="sslPrivate" name="sslPrivate">
-        <label class="mdl-textfield__label" for="sslPrivate">SSL Private Key (.pem)</label>
+      <div class="mdl-card__supporting-text">
+        Upload here the LetsEncrypt .pem certificates that were created by Certbot, so that we can reuse them for Vert.X.
       </div>
-      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-        <input class="mdl-textfield__input" type="file" id="sslPublic" name="sslPublic">
-        <label class="mdl-textfield__label" for="sslPublic">SSL Public Certificate (.pem)</label>
-      </div>
+      <div style="margin-top:20px">
+        <label style="margin-right:10px" class="input-custom-file mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">SSL Private Key (.pem)
+            <input type="file" id="sslPrivate" name="sslPrivate">
+        </label>
+        <label class="input-custom-file mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">SSL Public Cert (.pem)
+            <input type="file" id="sslPublic" name="sslPublic">
+        </label>
+        </div>
       <div class="mdl-card__actions mdl-card--border">
         <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" style="float:right" type="submit">Next</button>
       </div>

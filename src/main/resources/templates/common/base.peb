@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="en">
 {% include './header.peb' %}
+<style>
+{% block style %}{% endblock style %}
+</style>
 <body>
 {% block content %}{% endblock content %}
 </body>
