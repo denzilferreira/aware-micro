@@ -16,7 +16,6 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.common.template.TemplateEngine
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
-import org.xml.sax.InputSource
 import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -27,6 +26,8 @@ class MainVerticle : AbstractVerticle() {
   override fun start(startPromise: Promise<Void>) {
 
     println("AWARE Micro: initializing...")
+
+    getSensors()
 
     val serverOptions = HttpServerOptions()
     val pebbleEngine: TemplateEngine = PebbleTemplateEngine.create(vertx)
@@ -213,43 +214,66 @@ class MainVerticle : AbstractVerticle() {
               startPromise.fail(server.cause());
             }
           }
-
-        getSensors()
-
       }
     }
   }
 
 
-
   fun getSensors(): JsonArray {
     val sensors = JsonArray()
 
-    val aware_preferences = URL("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml").openStream()
-
+    val awarePreferences =
+      URL("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml").openStream()
     val docFactory = DocumentBuilderFactory.newInstance()
     val docBuilder = docFactory.newDocumentBuilder()
-    val doc = docBuilder.parse(aware_preferences)
+    val doc = docBuilder.parse(awarePreferences)
 
-    val preferenceScreens = doc.getElementsByTagName("PreferenceScreen")
-    for (i in 1 until preferenceScreens.length) {
-      val pref = preferenceScreens.item(i)
-      println(pref.attributes.getNamedItem("android:title").nodeValue)
-      println(pref.attributes.getNamedItem("android:summary").nodeValue)
+    val docRoot = doc.getElementsByTagName("PreferenceScreen")
+    for(i in 1..docRoot.length) {
+      val child = docRoot.item(i)
+      if (child != null) {
+        val sensor = JsonObject()
+        if (child.attributes.getNamedItem("android:key") != null)
+          sensor.put("sensor", child.attributes.getNamedItem("android:key").nodeValue)
+        if (child.attributes.getNamedItem("android:title") != null)
+          sensor.put("title", child.attributes.getNamedItem("android:title").nodeValue)
+        if (child.attributes.getNamedItem("android:icon") != null)
+          sensor.put("icon", child.attributes.getNamedItem("android:icon").nodeValue)
+        if (child.attributes.getNamedItem("android:summary") != null)
+          sensor.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
+
+        val subChildren = child.childNodes
+        for(j in 0..subChildren.length) {
+          val subChild = subChildren.item(j)
+          if (subChild != null) {
+            val settings = JsonObject()
+            if (child.attributes.getNamedItem("android:key") != null)
+              settings.put("setting", child.attributes.getNamedItem("android:key").nodeValue)
+            if (child.attributes.getNamedItem("android:title") != null)
+              settings.put("title", child.attributes.getNamedItem("android:title").nodeValue)
+            if (child.attributes.getNamedItem("android:defaultValue") != null)
+              settings.put("defaultValue", child.attributes.getNamedItem("android:defaultValue").nodeValue)
+            if (child.attributes.getNamedItem("android:summary") != null)
+              settings.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
+
+            sensor.put("settings", settings)
+          }
+        }
+
+        println(sensor.encodePrettily())
+      }
     }
 
     return sensors
   }
 
-  fun getPlugins(): JsonArray {
+  private fun getPlugins(): JsonArray {
     val plugins = JsonArray()
-
     return plugins
   }
 
-  fun getSchedulers(): JsonArray {
+  private fun getSchedulers(): JsonArray {
     val schedulers = JsonArray()
-
     return schedulers
   }
 }
