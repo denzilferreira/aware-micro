@@ -16,8 +16,8 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.common.template.TemplateEngine
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
+import io.vertx.kotlin.core.json.JsonObject
 import java.io.File
-import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
 class MainVerticle : AbstractVerticle() {
@@ -185,7 +185,10 @@ class MainVerticle : AbstractVerticle() {
 
           val templateData = JsonObject()
           templateData.put("title", "Step 4/4: Study")
-          templateData.put("sensors", getSensors("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml"))
+          templateData.put(
+            "sensors",
+            getSensors("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml").toList()
+          )
           templateData.put("plugins", getPlugins())
           templateData.put("schedulers", getSchedulers())
 
@@ -213,15 +216,17 @@ class MainVerticle : AbstractVerticle() {
               startPromise.fail(server.cause());
             }
           }
+
+        println(getSensors("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml").encodePrettily())
       }
     }
   }
 
 
-  fun getSensors(xmlUrl : String): JsonArray {
+  fun getSensors(xmlUrl: String): JsonArray {
     val output = JsonArray()
 
-    //val awarePreferences = URL(xmlUrl).openStream()
+    //val awarePreferences = URL(xmlUrl).content.toString()
 
     val awarePreferences = File("src/main/resources/templates/aware_preferences.xml")
 
@@ -230,7 +235,7 @@ class MainVerticle : AbstractVerticle() {
     val doc = docBuilder.parse(awarePreferences)
     val docRoot = doc.getElementsByTagName("PreferenceScreen")
 
-    for(i in 1..docRoot.length) {
+    for (i in 1..docRoot.length) {
       val child = docRoot.item(i)
       if (child != null) {
 
@@ -248,7 +253,7 @@ class MainVerticle : AbstractVerticle() {
         val settings = JsonArray()
 
         val subChildren = child.childNodes
-        for(j in 0..subChildren.length) {
+        for (j in 0..subChildren.length) {
 
           val subChild = subChildren.item(j)
 

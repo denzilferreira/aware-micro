@@ -16,7 +16,9 @@
         <span class="mdl-textfield__error">This key will be used by the client to join the study when scanning the QRCode</span>
       </div>
       {% for sensor in sensors %}
-         {{ sensor.sensor }}
+         {{ loop.index }}
+         {{ sensor['title'] }}
+         {{ sensor["title"] }}
       {% endfor %}
       {{plugins}}
       {{schedulers}}
