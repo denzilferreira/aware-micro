@@ -15,7 +15,9 @@
         <label class="mdl-textfield__label" for="studyKey">Study Key</label>
         <span class="mdl-textfield__error">This key will be used by the client to join the study when scanning the QRCode</span>
       </div>
-      {{sensors}}
+      {% for sensor in sensors %}
+         {{ sensor.sensor }}
+      {% endfor %}
       {{plugins}}
       {{schedulers}}
       <div class="mdl-card__actions mdl-card--border">

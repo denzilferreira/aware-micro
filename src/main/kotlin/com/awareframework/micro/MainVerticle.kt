@@ -16,6 +16,7 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.common.template.TemplateEngine
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
+import java.io.File
 import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -26,8 +27,6 @@ class MainVerticle : AbstractVerticle() {
   override fun start(startPromise: Promise<Void>) {
 
     println("AWARE Micro: initializing...")
-
-    getSensors()
 
     val serverOptions = HttpServerOptions()
     val pebbleEngine: TemplateEngine = PebbleTemplateEngine.create(vertx)
@@ -186,7 +185,7 @@ class MainVerticle : AbstractVerticle() {
 
           val templateData = JsonObject()
           templateData.put("title", "Step 4/4: Study")
-          templateData.put("sensors", getSensors())
+          templateData.put("sensors", getSensors("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml"))
           templateData.put("plugins", getPlugins())
           templateData.put("schedulers", getSchedulers())
 
@@ -219,20 +218,24 @@ class MainVerticle : AbstractVerticle() {
   }
 
 
-  fun getSensors(): JsonArray {
-    val sensors = JsonArray()
+  fun getSensors(xmlUrl : String): JsonArray {
+    val output = JsonArray()
 
-    val awarePreferences =
-      URL("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml").openStream()
+    //val awarePreferences = URL(xmlUrl).openStream()
+
+    val awarePreferences = File("src/main/resources/templates/aware_preferences.xml")
+
     val docFactory = DocumentBuilderFactory.newInstance()
     val docBuilder = docFactory.newDocumentBuilder()
     val doc = docBuilder.parse(awarePreferences)
-
     val docRoot = doc.getElementsByTagName("PreferenceScreen")
+
     for(i in 1..docRoot.length) {
       val child = docRoot.item(i)
       if (child != null) {
+
         val sensor = JsonObject()
+
         if (child.attributes.getNamedItem("android:key") != null)
           sensor.put("sensor", child.attributes.getNamedItem("android:key").nodeValue)
         if (child.attributes.getNamedItem("android:title") != null)
@@ -242,29 +245,32 @@ class MainVerticle : AbstractVerticle() {
         if (child.attributes.getNamedItem("android:summary") != null)
           sensor.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
 
+        val settings = JsonArray()
+
         val subChildren = child.childNodes
         for(j in 0..subChildren.length) {
-          val subChild = subChildren.item(j)
-          if (subChild != null) {
-            val settings = JsonObject()
-            if (child.attributes.getNamedItem("android:key") != null)
-              settings.put("setting", child.attributes.getNamedItem("android:key").nodeValue)
-            if (child.attributes.getNamedItem("android:title") != null)
-              settings.put("title", child.attributes.getNamedItem("android:title").nodeValue)
-            if (child.attributes.getNamedItem("android:defaultValue") != null)
-              settings.put("defaultValue", child.attributes.getNamedItem("android:defaultValue").nodeValue)
-            if (child.attributes.getNamedItem("android:summary") != null)
-              settings.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
 
-            sensor.put("settings", settings)
+          val subChild = subChildren.item(j)
+
+          if (subChild != null && subChild.nodeName.contains("Preference")) {
+            val setting = JsonObject()
+            if (subChild.attributes.getNamedItem("android:key") != null)
+              setting.put("setting", subChild.attributes.getNamedItem("android:key").nodeValue)
+            if (subChild.attributes.getNamedItem("android:title") != null)
+              setting.put("title", subChild.attributes.getNamedItem("android:title").nodeValue)
+            if (subChild.attributes.getNamedItem("android:defaultValue") != null)
+              setting.put("defaultValue", subChild.attributes.getNamedItem("android:defaultValue").nodeValue)
+            if (subChild.attributes.getNamedItem("android:summary") != null && subChild.attributes.getNamedItem("android:summary").nodeValue != "%s")
+              setting.put("summary", subChild.attributes.getNamedItem("android:summary").nodeValue)
+
+            settings.add(setting)
           }
         }
-
-        println(sensor.encodePrettily())
+        sensor.put("settings", settings)
+        output.add(sensor)
       }
     }
-
-    return sensors
+    return output
   }
 
   private fun getPlugins(): JsonArray {
