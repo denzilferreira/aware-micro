@@ -5,6 +5,7 @@ import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerOptions
@@ -16,8 +17,9 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.common.template.TemplateEngine
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
-import io.vertx.kotlin.core.json.JsonObject
+import java.io.BufferedInputStream
 import java.io.File
+import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
 class MainVerticle : AbstractVerticle() {
@@ -226,9 +228,9 @@ class MainVerticle : AbstractVerticle() {
   fun getSensors(xmlUrl: String): JsonArray {
     val output = JsonArray()
 
-    //val awarePreferences = URL(xmlUrl).content.toString()
+    val awarePreferences = URL(xmlUrl).openStream()
 
-    val awarePreferences = File("src/main/resources/templates/aware_preferences.xml")
+    //val awarePreferences = File("src/main/resources/templates/aware_preferences.xml")
 
     val docFactory = DocumentBuilderFactory.newInstance()
     val docBuilder = docFactory.newDocumentBuilder()
@@ -246,7 +248,7 @@ class MainVerticle : AbstractVerticle() {
         if (child.attributes.getNamedItem("android:title") != null)
           sensor.put("title", child.attributes.getNamedItem("android:title").nodeValue)
         if (child.attributes.getNamedItem("android:icon") != null)
-          sensor.put("icon", child.attributes.getNamedItem("android:icon").nodeValue)
+          sensor.put("icon", getSensorIcon(child.attributes.getNamedItem("android:icon").nodeValue))
         if (child.attributes.getNamedItem("android:summary") != null)
           sensor.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
 
@@ -286,5 +288,28 @@ class MainVerticle : AbstractVerticle() {
   private fun getSchedulers(): JsonArray {
     val schedulers = JsonArray()
     return schedulers
+  }
+
+  private fun getSensorIcon(drawableId : String) : String {
+    var output = ""
+    val icon = drawableId.substring(drawableId.indexOf('/')+1)
+    val fileSystem = vertx.fileSystem()
+    fileSystem.exists("src/main/resources/cache/$icon.png") { exists ->
+      if (exists.result()) {
+        output = "src/main/resources/cache/$icon.png"
+      } else {
+        val input = BufferedInputStream(URL("https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/$icon.png").openStream())
+        fileSystem.writeFile("src/main/resources/cache/$icon.png", Buffer.buffer(input.readBytes())) { result ->
+          if (result.succeeded()) {
+            println("Cached $icon.png success")
+            output = "src/main/resources/cache/$icon.png"
+          } else {
+            println("Failed to cache: $icon")
+          }
+        }
+      }
+    }
+    if (output.isEmpty()) println("Nothing here...")
+    return output
   }
 }
