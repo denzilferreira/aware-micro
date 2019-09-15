@@ -4,21 +4,24 @@ import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
+import io.vertx.core.Handler
 import io.vertx.core.Promise
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.http.HttpHeaders
-import io.vertx.core.http.HttpMethod
-import io.vertx.core.http.HttpServerOptions
+import io.vertx.core.file.AsyncFile
+import io.vertx.core.file.OpenOptions
+import io.vertx.core.http.*
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.core.net.PemKeyCertOptions
 import io.vertx.core.net.SelfSignedCertificate
+import io.vertx.core.streams.Pump
+import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.common.template.TemplateEngine
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
 import java.io.BufferedInputStream
-import java.io.File
+import java.io.InputStream
 import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -290,26 +293,34 @@ class MainVerticle : AbstractVerticle() {
     return schedulers
   }
 
-  private fun getSensorIcon(drawableId : String) : String {
+  private fun getSensorIcon(drawableId: String): String {
     var output = ""
-    val icon = drawableId.substring(drawableId.indexOf('/')+1)
+    val icon = drawableId.substring(drawableId.indexOf('/') + 1)
+
+    val downloadUrl =
+      "https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/*.png"
+
     val fileSystem = vertx.fileSystem()
     fileSystem.exists("src/main/resources/cache/$icon.png") { exists ->
       if (exists.result()) {
         output = "src/main/resources/cache/$icon.png"
+        return@exists
       } else {
-        val input = BufferedInputStream(URL("https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/$icon.png").openStream())
-        fileSystem.writeFile("src/main/resources/cache/$icon.png", Buffer.buffer(input.readBytes())) { result ->
-          if (result.succeeded()) {
-            println("Cached $icon.png success")
+        vertx.fileSystem().open("src/main/resources/cache/$icon.png", OpenOptions()) { async ->
+          val asyncFile = async.result() as AsyncFile
+
+          //TODO: learn how to use Pump to download a file from URL
+
+          val downloadPump = Pump.pump(, asyncFile)
+          downloadPump.start()
+          asyncFile.endHandler {
+            asyncFile.close()
             output = "src/main/resources/cache/$icon.png"
-          } else {
-            println("Failed to cache: $icon")
+            return@endHandler
           }
         }
       }
     }
-    if (output.isEmpty()) println("Nothing here...")
     return output
   }
 }
