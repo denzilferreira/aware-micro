@@ -296,27 +296,38 @@ class MainVerticle : AbstractVerticle() {
   private fun getSensorIcon(drawableId: String): String {
     var output = ""
     val icon = drawableId.substring(drawableId.indexOf('/') + 1)
+    val downloadUrl = "https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/*.png"
 
-    val downloadUrl =
-      "https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/*.png"
+    val httpOptions = HttpClientOptions().setKeepAlive(false).setLogActivity(true)
+    val httpClient = vertx.createHttpClient(httpOptions)
 
-    val fileSystem = vertx.fileSystem()
-    fileSystem.exists("src/main/resources/cache/$icon.png") { exists ->
-      if (exists.result()) {
-        output = "src/main/resources/cache/$icon.png"
-        return@exists
-      } else {
-        vertx.fileSystem().open("src/main/resources/cache/$icon.png", OpenOptions()) { async ->
-          val asyncFile = async.result() as AsyncFile
+    httpClient.get(downloadUrl.replace("*", drawableId)) { httpEvent ->
+      httpEvent.pause()
 
-          //TODO: learn how to use Pump to download a file from URL
+      val fileSystem = vertx.fileSystem()
+      fileSystem.exists("src/main/resources/cache/$icon.png") { exists ->
+        if (exists.result()) {
+          output = "src/main/resources/cache/$icon.png"
+          println("Cached: $icon")
+          return@exists
+        } else {
+          vertx.fileSystem().open("src/main/resources/cache/$icon.png", OpenOptions()) { async ->
+            if (async.failed()) {
+              async.cause().printStackTrace()
+              return@open
+            }
 
-          val downloadPump = Pump.pump(, asyncFile)
-          downloadPump.start()
-          asyncFile.endHandler {
-            asyncFile.close()
-            output = "src/main/resources/cache/$icon.png"
-            return@endHandler
+            val asyncFile = async.result() as AsyncFile
+            val downloadPump = Pump.pump(httpEvent, asyncFile)
+            downloadPump.start()
+            httpEvent.resume()
+
+            httpEvent.endHandler {
+              asyncFile.flush().close {
+                println("Downloaded: $icon - ${downloadPump.numberPumped()}")
+                output = "src/main/resources/cache/$icon.png"
+              }
+            }
           }
         }
       }
