@@ -30,6 +30,7 @@ dependencies {
   implementation "io.vertx:vertx-config:$vertxVersion"
   implementation "io.vertx:vertx-health-check:$vertxVersion"
   implementation "io.vertx:vertx-web:$vertxVersion"
+  implementation "io.vertx:vertx-web-client:$vertxVersion"
   implementation "io.vertx:vertx-mysql-client:$vertxVersion"
   implementation "io.vertx:vertx-hazelcast:$vertxVersion"
   implementation "io.vertx:vertx-auth-oauth2:$vertxVersion"
