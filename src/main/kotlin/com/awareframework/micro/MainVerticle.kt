@@ -5,17 +5,22 @@ import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.AsyncFile
 import io.vertx.core.file.OpenOptions
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerOptions
+import io.vertx.core.http.RequestOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.core.net.PemKeyCertOptions
 import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.core.streams.Pump
+import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.Router
+import io.vertx.ext.web.client.WebClient
+import io.vertx.ext.web.codec.BodyCodec
 import io.vertx.ext.web.common.template.TemplateEngine
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
@@ -210,10 +215,10 @@ class MainVerticle : AbstractVerticle() {
           .connectionHandler { httpConnection ->
             println("Connected from: ${httpConnection.remoteAddress()}")
           }
-          .listen(8080) { server ->
+          .listen(8000) { server ->
             if (server.succeeded()) {
               startPromise.complete()
-              println("AWARE Micro is ready to configure at https://localhost:8080")
+              println("AWARE Micro is ready to configure at https://localhost:8000")
             } else {
               println("AWARE Micro failed: ${server.cause()}")
               startPromise.fail(server.cause());
@@ -299,40 +304,66 @@ class MainVerticle : AbstractVerticle() {
     val downloadUrl =
       "https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/*.png"
 
-    val httpClient = vertx.createHttpClient()
-    httpClient.get(downloadUrl.replace("*", drawableId)) { httpEvent ->
-      httpEvent.pause()
+    val client = WebClient.create(vertx)
 
-      val fileSystem = vertx.fileSystem()
-      fileSystem.exists("src/main/resources/cache/$icon.png") { exists ->
-        if (exists.result()) {
-          output = "src/main/resources/cache/$icon.png"
-          println("Cached: $icon")
-          return@exists
-        } else {
-          vertx.fileSystem()
-            .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { async ->
-              if (async.failed()) {
-                async.cause().printStackTrace()
-                return@open
-              }
-              val asyncFile = async.result() as AsyncFile
-              val downloadPump = Pump.pump(httpEvent, asyncFile)
+    client.get(downloadUrl.replace("*", icon))
+      .as(BodyCodec.pipe()
+      .send { request ->
+        if(request.succeeded()) {
+          vertx.fileSystem().open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) {
+            writeFile ->
+            if (writeFile.succeeded()) {
+              val asyncFile = writeFile.result()
+              val downloadPump = Pump.pump(request.result() as ReadStream<Buffer>, asyncFile)
               downloadPump.start()
-              httpEvent.resume()
-              httpEvent.endHandler {
-                asyncFile.flush().close {
-                  if (it.failed()) {
-                    println("Failed to download $icon")
-                  }
-                }
-              }
               output = "src/main/resources/cache/$icon.png"
-              println("Downloaded: $icon - ${downloadPump.numberPumped()}")
             }
+          }
         }
       }
-    }
+
+//        webClient = WebClient.create(vertx, new WebClientOptions().setDefaultHost("s3-us-west-2.amazonaws.com"));
+//
+//    router.get("/api/test_download").handler(rc -> {
+//      HttpServerResponse response = rc.response();
+//      response.setChunked(true);
+//      webClient.get("/my_bucket/test_download")
+//        .as(BodyCodec.pipe(response))
+//        .send(ar -> {
+//      if (ar.failed()) {
+//        rc.fail(ar.cause());
+//      } else {
+//        // Nothing to do the content has been sent to the client and response.end() called
+//      }
+//    });
+//    });
+
+//    val httpClient = vertx.createHttpClient()
+//    httpClient.options(RequestOptions().setHost("github.com").setPort(443))
+//    httpClient.get(downloadUrl.replace("*", drawableId)) { httpEvent ->
+//
+//      httpEvent.pause()
+//
+//      vertx.fileSystem().open(
+//        "src/main/resources/cache/$icon.png",
+//        OpenOptions().setCreate(true).setWrite(true)
+//      ) { async ->
+//        val asyncFile: AsyncFile = async.result()
+//        val downloadPump = Pump.pump(httpEvent, asyncFile)
+//        downloadPump.start()
+//        httpEvent.resume()
+//        httpEvent.endHandler {
+//          asyncFile.flush().close {
+//            if (it.failed()) {
+//              println("Failed to download $icon")
+//            } else {
+//              output = "src/main/resources/cache/$icon.png"
+//              println("Downloaded: $icon - ${downloadPump.numberPumped()}")
+//            }
+//          }
+//        }
+//      }
+//    }
     return output
   }
 }
