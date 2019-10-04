@@ -17,6 +17,8 @@
       </div>
       {% for sensor in sensors %}
          <img src="{{ sensor.map['icon'] }}" />
+         {{ sensor.map['title'] }}
+         {{ sensor.map['summary'] }}
       {% endfor %}
       {{plugins}}
       {{schedulers}}

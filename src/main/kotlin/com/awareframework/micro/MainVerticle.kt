@@ -5,6 +5,7 @@ import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.AsyncFile
 import io.vertx.core.file.OpenOptions
 import io.vertx.core.http.HttpHeaders
@@ -15,7 +16,11 @@ import io.vertx.core.json.JsonObject
 import io.vertx.core.net.PemKeyCertOptions
 import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.core.streams.Pump
+import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.Router
+import io.vertx.ext.web.client.WebClient
+import io.vertx.ext.web.client.WebClientOptions
+import io.vertx.ext.web.codec.BodyCodec
 import io.vertx.ext.web.common.template.TemplateEngine
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
@@ -296,43 +301,25 @@ class MainVerticle : AbstractVerticle() {
 
     println("Processing $icon")
 
-    val downloadUrl =
-      "https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/*.png"
+    val downloadUrl = "https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/*.png"
 
-    val httpClient = vertx.createHttpClient()
-    httpClient.get(downloadUrl.replace("*", drawableId)) { httpEvent ->
-      httpEvent.pause()
+    val webclientOptions = WebClientOptions()
+    webclientOptions.isSsl = true
+    webclientOptions.isFollowRedirects = true
+    webclientOptions.isKeepAlive = false
 
-      val fileSystem = vertx.fileSystem()
-      fileSystem.exists("src/main/resources/cache/$icon.png") { exists ->
-        if (exists.result()) {
-          output = "src/main/resources/cache/$icon.png"
-          println("Cached: $icon")
-          return@exists
-        } else {
-          vertx.fileSystem()
-            .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { async ->
-              if (async.failed()) {
-                async.cause().printStackTrace()
-                return@open
-              }
-              val asyncFile = async.result() as AsyncFile
-              val downloadPump = Pump.pump(httpEvent, asyncFile)
-              downloadPump.start()
-              httpEvent.resume()
-              httpEvent.endHandler {
-                asyncFile.flush().close {
-                  if (it.failed()) {
-                    println("Failed to download $icon")
-                  }
-                }
-              }
-              output = "src/main/resources/cache/$icon.png"
-              println("Downloaded: $icon - ${downloadPump.numberPumped()}")
-            }
+    val filesystem = vertx.fileSystem()
+    filesystem.open("src/main/resources/cache/$icon.png", OpenOptions()) { async ->
+      val asyncFile = async.result()
+      val webClient = WebClient.create(vertx, webclientOptions)
+      webClient.get(downloadUrl.replace("*", icon)).sendStream(asyncFile) { downloaded ->
+        if (downloaded.succeeded()) {
+          asyncFile.write(downloaded.result().bodyAsBuffer())
         }
       }
     }
+
+    output = "src/main/resources/cache/$icon.png"
     return output
   }
 }
