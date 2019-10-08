@@ -187,3 +187,4 @@ nbdist/
 # Project exclude paths
 /build/
 /.idea/
+/src/main/resources/cache/

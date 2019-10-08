@@ -132,17 +132,17 @@ class MainVerticle : AbstractVerticle() {
 
         val pluginsList = HashMap<String, String>()
         pluginsList["com.aware.plugin.ambient_noise"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.ambient_noise/master/com.aware.plugin.ambient_noise/src/main/res/xml/preferences_ambient_noise.xml"
-//        pluginsList["com.aware.plugin.contacts_list"] =
-//        pluginsList["com.aware.plugin.device_usage"] =
-//        pluginsList["com.aware.plugin.esm.scheduler"] =
-//        pluginsList["com.aware.plugin.fitbit"] =
-//        pluginsList["com.aware.plugin.google.activity_recognition"] =
-//        pluginsList["com.aware.plugin.google.auth"] =
-//        pluginsList["com.aware.plugin.google.fused_location"] =
-//        pluginsList["com.aware.plugin.openweather"] =
-//        pluginsList["com.aware.plugin.sensortag"] =
-//        pluginsList["com.aware.plugin.sentimental"] =
-//        pluginsList["com.aware.plugin.studentlife.audio_final"] =
+        pluginsList["com.aware.plugin.contacts_list"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.contacts_list/master/com.aware.plugin.contacts_list/src/main/res/xml/preferences_contacts_list.xml"
+        pluginsList["com.aware.plugin.device_usage"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.device_usage/master/com.aware.plugin.device_usage/src/main/res/xml/preferences_device_usage.xml"
+        pluginsList["com.aware.plugin.esm.scheduler"] = ""
+        pluginsList["com.aware.plugin.fitbit"] = ""
+        pluginsList["com.aware.plugin.google.activity_recognition"] = ""
+        pluginsList["com.aware.plugin.google.auth"] = ""
+        pluginsList["com.aware.plugin.google.fused_location"] = ""
+        pluginsList["com.aware.plugin.openweather"] = ""
+        pluginsList["com.aware.plugin.sensortag"] = ""
+        pluginsList["com.aware.plugin.sentimental"] = ""
+        pluginsList["com.aware.plugin.studentlife.audio_final"] = ""
 
         val plugins = getPlugins(pluginsList)
         configFile.put("plugins", plugins)
@@ -261,6 +261,7 @@ class MainVerticle : AbstractVerticle() {
     }
   }
 
+  //TODO: make recursive version of xml parser as screens can have sub-sub-...-screens, generalisable for sensors and plugins.
 
   fun getSensors(xmlUrl: String): JsonArray {
     val sensors = JsonArray()
