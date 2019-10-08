@@ -23,7 +23,7 @@ application {
 
 
 def mainVerticleName = 'com.awareframework.micro.MainVerticle'
-def watchForChange = 'src/**/*'
+def watchForChange = 'src/main/kotlin/**/*'
 def doOnChange = './gradlew classes'
 
 dependencies {
