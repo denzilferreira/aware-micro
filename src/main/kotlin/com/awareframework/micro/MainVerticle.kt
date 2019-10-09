@@ -370,7 +370,7 @@ class MainVerticle : AbstractVerticle() {
     val icon = drawableId.substring(drawableId.indexOf('/') + 1)
     //println("Processing $icon")
 
-    val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/*.png"
+    val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-core/src/main/res/drawable/*.png"
     vertx.fileSystem()
       .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
         if (writeFile.succeeded()) {
