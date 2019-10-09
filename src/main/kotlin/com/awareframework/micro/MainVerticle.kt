@@ -45,9 +45,9 @@ class MainVerticle : AbstractVerticle() {
 
     val configReader = ConfigRetriever.create(vertx, configRetrieverOptions)
     configReader.getConfig { config ->
-      println("Loaded configuration: ${config.result()}")
-
       if (config.succeeded() && config.result().containsKey("server")) {
+
+        println("Loaded configuration: ${config.result()}")
 
 //        val parameters = config.result()
 //        val serverWeb = parameters.getJsonObject("server").getJsonObject("web")
@@ -134,27 +134,25 @@ class MainVerticle : AbstractVerticle() {
         pluginsList["com.aware.plugin.ambient_noise"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.ambient_noise/master/com.aware.plugin.ambient_noise/src/main/res/xml/preferences_ambient_noise.xml"
         pluginsList["com.aware.plugin.contacts_list"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.contacts_list/master/com.aware.plugin.contacts_list/src/main/res/xml/preferences_contacts_list.xml"
         pluginsList["com.aware.plugin.device_usage"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.device_usage/master/com.aware.plugin.device_usage/src/main/res/xml/preferences_device_usage.xml"
-        pluginsList["com.aware.plugin.esm.scheduler"] = ""
-        pluginsList["com.aware.plugin.fitbit"] = ""
-        pluginsList["com.aware.plugin.google.activity_recognition"] = ""
-        pluginsList["com.aware.plugin.google.auth"] = ""
-        pluginsList["com.aware.plugin.google.fused_location"] = ""
-        pluginsList["com.aware.plugin.openweather"] = ""
-        pluginsList["com.aware.plugin.sensortag"] = ""
-        pluginsList["com.aware.plugin.sentimental"] = ""
-        pluginsList["com.aware.plugin.studentlife.audio_final"] = ""
+        pluginsList["com.aware.plugin.esm.scheduler"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.esm.scheduler/master/com.aware.plugin.esm.scheduler/src/main/res/xml/preferences_esm_scheduler.xml"
+        pluginsList["com.aware.plugin.fitbit"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.fitbit/master/com.aware.plugin.fitbit/src/main/res/xml/preferences_fitbit.xml"
+        pluginsList["com.aware.plugin.google.activity_recognition"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.activity_recognition/master/com.aware.plugin.google.activity_recognition/src/main/res/xml/preferences_activity_recog.xml"
+        pluginsList["com.aware.plugin.google.auth"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.auth/master/com.aware.plugin.google.auth/src/main/res/xml/preferences_google_auth.xml"
+        pluginsList["com.aware.plugin.google.fused_location"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.fused_location/master/com.aware.plugin.google.fused_location/src/main/res/xml/preferences_fused_location.xml"
+        pluginsList["com.aware.plugin.openweather"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.openweather/master/com.aware.plugin.openweather/src/main/res/xml/preferences_openweather.xml"
+        pluginsList["com.aware.plugin.sensortag"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.sensortag/master/com.aware.plugin.sensortag/src/main/res/xml/preferences_sensortag.xml"
+        pluginsList["com.aware.plugin.sentimental"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.sentimental/master/com.aware.plugin.sentimental/src/main/res/xml/preferences_sentimental.xml"
+        pluginsList["com.aware.plugin.studentlife.audio_final"] = "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.studentlife.audio_final/master/com.aware.plugin.studentlife.audio/src/main/res/xml/preferences_conversations.xml"
 
         val plugins = getPlugins(pluginsList)
         configFile.put("plugins", plugins)
 
         val asyncFile = vertx.fileSystem().writeFile("./aware-config.json", Buffer.buffer(configFile.encodePrettily())) { result ->
           if(result.succeeded()) {
-            println("You can now configure your server by editing the aware-config.json that was automatically created.")
+            println("You can now configure your server by editing the aware-config.json that was automatically created. You can now stop this instance (Ctrl+C / Cmd+C)")
           } else {
             println("Failed to create aware-config.json: ${result.cause()}")
           }
-
-          stop()
         }
 
 //        val selfSigned = SelfSignedCertificate.create()
@@ -261,8 +259,6 @@ class MainVerticle : AbstractVerticle() {
     }
   }
 
-  //TODO: make recursive version of xml parser as screens can have sub-sub-...-screens, generalisable for sensors and plugins.
-
   fun getSensors(xmlUrl: String): JsonArray {
     val sensors = JsonArray()
     val awarePreferences = URL(xmlUrl).openStream()
@@ -301,7 +297,8 @@ class MainVerticle : AbstractVerticle() {
             if (subChild.attributes.getNamedItem("android:summary") != null && subChild.attributes.getNamedItem("android:summary").nodeValue != "%s")
               setting.put("summary", subChild.attributes.getNamedItem("android:summary").nodeValue)
 
-            settings.add(setting)
+            if (setting.containsKey("defaultValue"))
+              settings.add(setting)
           }
         }
         sensor.put("settings", settings)
@@ -317,12 +314,53 @@ class MainVerticle : AbstractVerticle() {
     for (pluginUrl in xmlUrls) {
       val pluginPreferences = URL(pluginUrl.value).openStream()
 
-      //TODO parse settings, add to JSON
-    }
+      val docFactory = DocumentBuilderFactory.newInstance()
+      val docBuilder = docFactory.newDocumentBuilder()
+      val doc = docBuilder.parse(pluginPreferences)
+      val docRoot = doc.getElementsByTagName("PreferenceScreen")
 
+      for (i in 0..docRoot.length) {
+        val child = docRoot.item(i)
+        if (child != null) {
+
+          val plugin = JsonObject()
+          plugin.put("package_name", pluginUrl.key)
+
+          if (child.attributes.getNamedItem("android:key") != null)
+            plugin.put("plugin", child.attributes.getNamedItem("android:key").nodeValue)
+          if (child.attributes.getNamedItem("android:icon") != null)
+            plugin.put("icon", getSensorIcon(child.attributes.getNamedItem("android:icon").nodeValue))
+          if (child.attributes.getNamedItem("android:summary") != null)
+            plugin.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
+
+          val settings = JsonArray()
+          val subChildren = child.childNodes
+          for (j in 0..subChildren.length) {
+            val subChild = subChildren.item(j)
+            if (subChild != null && subChild.nodeName.contains("Preference")) {
+              val setting = JsonObject()
+              if (subChild.attributes.getNamedItem("android:key") != null)
+                setting.put("setting", subChild.attributes.getNamedItem("android:key").nodeValue)
+              if (subChild.attributes.getNamedItem("android:title") != null)
+                setting.put("title", subChild.attributes.getNamedItem("android:title").nodeValue)
+              if (subChild.attributes.getNamedItem("android:defaultValue") != null)
+                setting.put("defaultValue", subChild.attributes.getNamedItem("android:defaultValue").nodeValue)
+              if (subChild.attributes.getNamedItem("android:summary") != null && subChild.attributes.getNamedItem("android:summary").nodeValue != "%s")
+                setting.put("summary", subChild.attributes.getNamedItem("android:summary").nodeValue)
+
+              if (setting.containsKey("defaultValue"))
+                settings.add(setting)
+            }
+          }
+          plugin.put("settings", settings)
+          plugins.add(plugin)
+        }
+      }
+    }
     return plugins
   }
 
+  //TODO later with UI
   private fun getSchedulers(): JsonArray {
     val schedulers = JsonArray()
     return schedulers
@@ -330,7 +368,7 @@ class MainVerticle : AbstractVerticle() {
 
   private fun getSensorIcon(drawableId: String): String {
     val icon = drawableId.substring(drawableId.indexOf('/') + 1)
-    println("Processing $icon")
+    //println("Processing $icon")
 
     val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/*.png"
     vertx.fileSystem()
@@ -350,7 +388,7 @@ class MainVerticle : AbstractVerticle() {
             .send { request ->
               if (request.succeeded()) {
                 val iconFile = request.result()
-                println("Requesting $icon.png: ${iconFile.statusCode()}")
+                //println("Requesting $icon.png: ${iconFile.statusCode()}")
               }
             }
         } else {

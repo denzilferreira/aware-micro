@@ -19,8 +19,8 @@
 
 
   <link crossorigin="anonymous" media="all" integrity="sha512-L6knYQj0qk2lhbBdXyy/eF0pc3uMue04cNJLLNWlHboKkkUQLJd4JbdYHGc9aqy92/vfVBLnddS6bpVf285Pqg==" rel="stylesheet" href="https://github.githubassets.com/assets/frameworks-c21c347ce575eb3ded7531f19af1d324.css" />
-  <link crossorigin="anonymous" media="all" integrity="sha512-J91Qhea0f13DaSjx3AXXGO3viFpQAPPnpVDE8Umc73sXEtrah52Hq277J1yN+ALwl/RwH5VQ/Ntc0756LZy/7w==" rel="stylesheet" href="https://github.githubassets.com/assets/site-d20aa35917cf810095fab7458ea2a8e4.css" />
-    <link crossorigin="anonymous" media="all" integrity="sha512-Eg6fSzYLua+U8QHG4DPY7oNAT6Ohj0BpQ9CTDa2Yzlc2MrXBBGM9iuAXE3g3WGCaFG+2ngLVh2qhQMril+4vOg==" rel="stylesheet" href="https://github.githubassets.com/assets/github-89d9d3c9d19ddf234d9355a9ff50bcbd.css" />
+  <link crossorigin="anonymous" media="all" integrity="sha512-q0uE9UAtjRgctFaLFVvUGVtXC6ggCD9Qcg86uwRaLx2RdC7FIE+hPfB4YDaM8lCecPVMwsxDyvqkXI2XEKDCOA==" rel="stylesheet" href="https://github.githubassets.com/assets/site-d2ea9f95eb7121ca3a5f9571e0012f11.css" />
+    <link crossorigin="anonymous" media="all" integrity="sha512-mnHMLvFf0p17JE6yFAd8B7ktb7BDi6ElVPTX9yAPKZE4nVuenu4/qXXBti6PR2MNm+stm6yfUDFF3rA7pC12UQ==" rel="stylesheet" href="https://github.githubassets.com/assets/github-823496642818413e247f8fadad05ea69.css" />
     
     
     
@@ -65,7 +65,7 @@
   <link rel="assets" href="https://github.githubassets.com/">
   
   
-  <meta name="request-id" content="DA6E:1EA21:38E5247:56C80B1:5D9AE125" data-pjax-transient>
+  <meta name="request-id" content="CA7D:22EE5:7B28360:BA8D509:5D9DC6FA" data-pjax-transient>
 
 
   
@@ -76,7 +76,7 @@
     <meta name="google-site-verification" content="ZzhVyEFwb7w3e0-uOTltm8Jsck2F5StVihD0exw2fsA">
     <meta name="google-site-verification" content="GXs5KoUUkNCoaAZn7wPN-t01Pywp9M3sEjnt_3_ZWPc">
 
-  <meta name="octolytics-host" content="collector.githubapp.com" /><meta name="octolytics-app-id" content="github" /><meta name="octolytics-event-url" content="https://collector.githubapp.com/github-external/browser_event" /><meta name="octolytics-dimension-request_id" content="DA6E:1EA21:38E5247:56C80B1:5D9AE125" /><meta name="octolytics-dimension-region_edge" content="ams" /><meta name="octolytics-dimension-region_render" content="iad" /><meta name="octolytics-dimension-ga_id" content="" class="js-octo-ga-id" /><meta name="octolytics-dimension-visitor_id" content="6340410476896903461" />
+  <meta name="octolytics-host" content="collector.githubapp.com" /><meta name="octolytics-app-id" content="github" /><meta name="octolytics-event-url" content="https://collector.githubapp.com/github-external/browser_event" /><meta name="octolytics-dimension-request_id" content="CA7D:22EE5:7B28360:BA8D509:5D9DC6FA" /><meta name="octolytics-dimension-region_edge" content="ams" /><meta name="octolytics-dimension-region_render" content="iad" /><meta name="octolytics-dimension-ga_id" content="" class="js-octo-ga-id" /><meta name="octolytics-dimension-visitor_id" content="7684886930200053498" />
 
 
 
@@ -94,16 +94,16 @@
     <meta name="user-login" content="">
 
       <meta name="expected-hostname" content="github.com">
-    <meta name="js-proxy-site-detection-payload" content="MmEyMWMyZjRlODhjNjNiMzE5NTdjZWFhZGUwNzAxNmZkZTgwMjdmMzQ1Njk1ZDgwZjA1YjJkNjRlNGY1NmJlYnx7InJlbW90ZV9hZGRyZXNzIjoiMTMwLjIzMS4yMDMuNjciLCJyZXF1ZXN0X2lkIjoiREE2RToxRUEyMTozOEU1MjQ3OjU2QzgwQjE6NUQ5QUUxMjUiLCJ0aW1lc3RhbXAiOjE1NzA0MzEyNjksImhvc3QiOiJnaXRodWIuY29tIn0=">
+    <meta name="js-proxy-site-detection-payload" content="MDBhNzkwYmVjNDRkOGVkYjFjY2U5YzZiY2FiZGRmY2U3OWEyZTU3MDA2MzMwNTM1ODk4MGI1ZTFmMGJlZDJiMXx7InJlbW90ZV9hZGRyZXNzIjoiODcuOTIuNzYuMjMzIiwicmVxdWVzdF9pZCI6IkNBN0Q6MjJFRTU6N0IyODM2MDpCQThENTA5OjVEOURDNkZBIiwidGltZXN0YW1wIjoxNTcwNjIxMTc4LCJob3N0IjoiZ2l0aHViLmNvbSJ9">
 
     <meta name="enabled-features" content="ACTIONS_V2_ON_MARKETPLACE,MARKETPLACE_FEATURED_BLOG_POSTS,MARKETPLACE_INVOICED_BILLING,MARKETPLACE_SOCIAL_PROOF_CUSTOMERS,MARKETPLACE_TRENDING_SOCIAL_PROOF,MARKETPLACE_RECOMMENDATIONS,MARKETPLACE_PENDING_INSTALLATIONS">
 
-  <meta name="html-safe-nonce" content="ba1e51e0dbc89c0671f58c71c8d6a1c43e40e6bc">
+  <meta name="html-safe-nonce" content="1f6648964fb4d96a082df1dce165a7f659611ba9">
 
-  <meta http-equiv="x-pjax-version" content="40f3e3df870ebd2145fdc19802b159c8">
+  <meta http-equiv="x-pjax-version" content="150224778c5a81a5cbe9c937f89a522f">
   
 
-      <link crossorigin="anonymous" media="all" integrity="sha512-J91Qhea0f13DaSjx3AXXGO3viFpQAPPnpVDE8Umc73sXEtrah52Hq277J1yN+ALwl/RwH5VQ/Ntc0756LZy/7w==" rel="stylesheet" href="https://github.githubassets.com/assets/site-d20aa35917cf810095fab7458ea2a8e4.css" />
+      <link crossorigin="anonymous" media="all" integrity="sha512-q0uE9UAtjRgctFaLFVvUGVtXC6ggCD9Qcg86uwRaLx2RdC7FIE+hPfB4YDaM8lCecPVMwsxDyvqkXI2XEKDCOA==" rel="stylesheet" href="https://github.githubassets.com/assets/site-d2ea9f95eb7121ca3a5f9571e0012f11.css" />
 
 
 
@@ -154,7 +154,7 @@
         <div class="d-flex flex-items-center">
             <a href="/join?source=header"
               class="d-inline-block d-lg-none f5 text-white no-underline border border-gray-dark rounded-2 px-2 py-1 mr-3 mr-sm-5"
-              data-hydro-click="{&quot;event_type&quot;:&quot;authentication.click&quot;,&quot;payload&quot;:{&quot;location_in_page&quot;:&quot;site header&quot;,&quot;repository_id&quot;:null,&quot;auth_type&quot;:&quot;SIGN_UP&quot;,&quot;client_id&quot;:null,&quot;originating_request_id&quot;:&quot;DA6E:1EA21:38E5247:56C80B1:5D9AE125&quot;,&quot;originating_url&quot;:&quot;https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/ic_action_linear_accelerometer.png&quot;,&quot;referrer&quot;:null,&quot;user_id&quot;:null}}" data-hydro-click-hmac="43836b56238a56f8240251d3af07412a3768c8011a1fefd5bfecb0740e9a8568"
+              data-hydro-click="{&quot;event_type&quot;:&quot;authentication.click&quot;,&quot;payload&quot;:{&quot;location_in_page&quot;:&quot;site header&quot;,&quot;repository_id&quot;:null,&quot;auth_type&quot;:&quot;SIGN_UP&quot;,&quot;client_id&quot;:null,&quot;originating_request_id&quot;:&quot;CA7D:22EE5:7B28360:BA8D509:5D9DC6FA&quot;,&quot;originating_url&quot;:&quot;https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/ic_action_linear_accelerometer.png&quot;,&quot;referrer&quot;:null,&quot;user_id&quot;:null}}" data-hydro-click-hmac="f48cc6c3ae5b194a5df3ba08b6028433adef71a14397959588c538b3c54387e0"
               data-ga-click="(Logged out) Header, clicked Sign up, text:sign-up">
               Sign&nbsp;up
             </a>
@@ -297,7 +297,7 @@
           aria-autocomplete="list"
           aria-controls="jump-to-results"
           aria-label="Search"
-          data-jump-to-suggestions-path="/_graphql/GetSuggestedNavigationDestinations#csrf-token=pLuSMHtQSUhJFTImq3CKIXu6Fw8P4Eawxx21ydJ2VqWfpPXz42FZnu2NUQVXKBg4yRnAZMVGj80Yb/CRMZHndg=="
+          data-jump-to-suggestions-path="/_graphql/GetSuggestedNavigationDestinations#csrf-token=w0QORUmsSDZWGkopxnpRyrrPNNWtRTbto3967FoHJaW0bebEiG6RrQSeADKQcsq+HR4I6+LfEuq2mWpOrvF+kQ=="
           spellcheck="false"
           autocomplete="off"
           >
@@ -424,13 +424,13 @@
 
         <a href="/login?return_to=%2Fdenzilferreira%2Faware-client%2Fraw%2Fmaster%2Faware-phone%2Fsrc%2Fmain%2Fres%2Fdrawable%2Fic_action_linear_accelerometer.png"
           class="HeaderMenu-link no-underline mr-3"
-          data-hydro-click="{&quot;event_type&quot;:&quot;authentication.click&quot;,&quot;payload&quot;:{&quot;location_in_page&quot;:&quot;site header menu&quot;,&quot;repository_id&quot;:null,&quot;auth_type&quot;:&quot;SIGN_UP&quot;,&quot;client_id&quot;:null,&quot;originating_request_id&quot;:&quot;DA6E:1EA21:38E5247:56C80B1:5D9AE125&quot;,&quot;originating_url&quot;:&quot;https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/ic_action_linear_accelerometer.png&quot;,&quot;referrer&quot;:null,&quot;user_id&quot;:null}}" data-hydro-click-hmac="360282cca1d3c83dae6eb62b788d3d7d6c8cb910d97dd4a74c041dac47f2f6be"
+          data-hydro-click="{&quot;event_type&quot;:&quot;authentication.click&quot;,&quot;payload&quot;:{&quot;location_in_page&quot;:&quot;site header menu&quot;,&quot;repository_id&quot;:null,&quot;auth_type&quot;:&quot;SIGN_UP&quot;,&quot;client_id&quot;:null,&quot;originating_request_id&quot;:&quot;CA7D:22EE5:7B28360:BA8D509:5D9DC6FA&quot;,&quot;originating_url&quot;:&quot;https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/ic_action_linear_accelerometer.png&quot;,&quot;referrer&quot;:null,&quot;user_id&quot;:null}}" data-hydro-click-hmac="45f3656352edb8c86514f1bf45db56e7a796de8c37f0f8e045053b10ddf99e6c"
           data-ga-click="(Logged out) Header, clicked Sign in, text:sign-in">
           Sign&nbsp;in
         </a>
           <a href="/join?source=header"
             class="HeaderMenu-link d-inline-block no-underline border border-gray-dark rounded-1 px-2 py-1"
-            data-hydro-click="{&quot;event_type&quot;:&quot;authentication.click&quot;,&quot;payload&quot;:{&quot;location_in_page&quot;:&quot;site header menu&quot;,&quot;repository_id&quot;:null,&quot;auth_type&quot;:&quot;SIGN_UP&quot;,&quot;client_id&quot;:null,&quot;originating_request_id&quot;:&quot;DA6E:1EA21:38E5247:56C80B1:5D9AE125&quot;,&quot;originating_url&quot;:&quot;https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/ic_action_linear_accelerometer.png&quot;,&quot;referrer&quot;:null,&quot;user_id&quot;:null}}" data-hydro-click-hmac="360282cca1d3c83dae6eb62b788d3d7d6c8cb910d97dd4a74c041dac47f2f6be"
+            data-hydro-click="{&quot;event_type&quot;:&quot;authentication.click&quot;,&quot;payload&quot;:{&quot;location_in_page&quot;:&quot;site header menu&quot;,&quot;repository_id&quot;:null,&quot;auth_type&quot;:&quot;SIGN_UP&quot;,&quot;client_id&quot;:null,&quot;originating_request_id&quot;:&quot;CA7D:22EE5:7B28360:BA8D509:5D9DC6FA&quot;,&quot;originating_url&quot;:&quot;https://github.com/denzilferreira/aware-client/raw/master/aware-phone/src/main/res/drawable/ic_action_linear_accelerometer.png&quot;,&quot;referrer&quot;:null,&quot;user_id&quot;:null}}" data-hydro-click-hmac="45f3656352edb8c86514f1bf45db56e7a796de8c37f0f8e045053b10ddf99e6c"
             data-ga-click="(Logged out) Header, clicked Sign up, text:sign-up">
             Sign&nbsp;up
           </a>
@@ -589,10 +589,10 @@
   </div>
 
 
-    <script crossorigin="anonymous" integrity="sha512-c0elHvp8sBbOiSugogRSA3MLs5zY08OnW5VpS+vms222BXQXIubkTA13IFDT9DdO067XuX3beIFBYxESRJvVLQ==" type="application/javascript" src="https://github.githubassets.com/assets/compat-bootstrap-9d3807cf.js"></script>
-    <script crossorigin="anonymous" integrity="sha512-TZudXRQ5W4IkAcu8Q7fIfpzm0Yp/tVhoKbbo7dDjaADPszRJ7u/FnHFv8VFfO51q5t2LaPaD6hOpU+qcwcGsrg==" type="application/javascript" src="https://github.githubassets.com/assets/frameworks-6dd244f9.js"></script>
+    <script crossorigin="anonymous" integrity="sha512-Z2zZ550WCxISgUZjMiN/Hga29DgA7kxSJcnI3EEssOFxK+wt8QwLcu3CPhvwufZ/XMcL/nkjrXQYWIpwFucAPQ==" type="application/javascript" src="https://github.githubassets.com/assets/compat-bootstrap-6368f09f.js"></script>
+    <script crossorigin="anonymous" integrity="sha512-fLkwsdrBoopf1K6TnAjwPanoWuIarbBAOc6wG4fvpVUQHuvrUOO4nMA/TFQGthtZ03o0tm5Blibo2MyYQ0I3MA==" type="application/javascript" src="https://github.githubassets.com/assets/frameworks-0eb7b6c3.js"></script>
     
-    <script crossorigin="anonymous" async="async" integrity="sha512-Z+Zl4BK0L9x0iekK4FMMiPy/+YHBKTtjop7Tr0ATCPL3QGd7kfk89YfwXgKIUfjOEcJ8gbnUZI71iDfhNynUeQ==" type="application/javascript" src="https://github.githubassets.com/assets/github-bootstrap-db8e6ee1.js"></script>
+    <script crossorigin="anonymous" async="async" integrity="sha512-9KpqeRHLo0xg+ygWuWloOXJG1bDpIM2NRl+N60RvLbmbp/fQ2yCTuAKhuFAq3Qlat5UMcfID5NWsIt7pbxyJRA==" type="application/javascript" src="https://github.githubassets.com/assets/github-bootstrap-1da6f3fb.js"></script>
     
     
     
@@ -623,4 +623,6 @@
 
   </body>
 </html>
+
+l>
 
