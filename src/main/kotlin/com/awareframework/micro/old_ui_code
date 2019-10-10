@@ -1,0 +1,134 @@
+private fun getSensorIcon(drawableId: String): String {
+    val icon = drawableId.substring(drawableId.indexOf('/') + 1)
+    //println("Processing $icon")
+
+    val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-core/src/main/res/drawable/*.png"
+    vertx.fileSystem()
+      .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
+        if (writeFile.succeeded()) {
+          val asyncFile = writeFile.result()
+          val webClientOptions = WebClientOptions()
+            .setKeepAlive(true)
+            .setPipelining(true)
+            .setFollowRedirects(true)
+            .setSsl(true)
+            .setTrustAll(true)
+
+          val client = WebClient.create(vertx, webClientOptions)
+          client.get(443, "github.com", downloadUrl.replace("*", icon))
+            .`as`(BodyCodec.pipe(asyncFile, true))
+            .send { request ->
+              if (request.succeeded()) {
+                val iconFile = request.result()
+                //println("Requesting $icon.png: ${iconFile.statusCode()}")
+              }
+            }
+        } else {
+          println("Unable to create file: ${writeFile.cause()}")
+        }
+      }
+    return "$icon.png"
+  }
+
+
+
+//        val selfSigned = SelfSignedCertificate.create()
+//        serverOptions.keyCertOptions = selfSigned.keyCertOptions()
+//        serverOptions.isSsl = true
+//
+//        router.get("/").handler { request ->
+//          val data = JsonObject()
+//          data.put("title", "Step 1/4: Create account")
+//          pebbleEngine.render(data, "templates/create-account.peb") { pebble ->
+//            if (pebble.succeeded()) {
+//              request.response().statusCode = 200
+//              request.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+//            }
+//          }
+//        }
+//
+//        router.post("/create-account").handler { request ->
+//          val credentials = JsonObject()
+//            .put("user", request.request().getParam("user"))
+//            .put("password", request.request().getParam("password"))
+//            .put("email", request.request().getParam("email"))
+//          configStore.config.put("credentials", credentials)
+//
+//          val templateData = JsonObject()
+//          templateData.put("user", configStore.config.getJsonObject("credentials").getString("user"))
+//          templateData.put("title", "Step 2/4: RESTful API")
+//          pebbleEngine.render(templateData, "templates/create-server.peb") { pebble ->
+//            if (pebble.succeeded()) {
+//              request.response().statusCode = 200
+//              request.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+//            } else {
+//              println("Failed: ${pebble.cause()}")
+//            }
+//          }
+//        }
+//
+//        router.post("/create-server").handler { request ->
+//          val server = JsonObject()
+//            .put("domain", request.request().getParam("domain"))
+//            .put("port", request.request().getParam("port"))
+//            .put("ssl_privateKey", request.request().getParam("sslPrivate"))
+//            .put("ssl_publicCert", request.request().getParam("sslPublicCert"))
+//          configStore.config.put("server", server)
+//
+//          val templateData = JsonObject()
+//          templateData.put("user", configStore.config.getJsonObject("credentials").getString("user"))
+//          templateData.put("title", "Step 3/4: Database")
+//
+//          pebbleEngine.render(templateData, "templates/create-database.peb") { pebble ->
+//            if (pebble.succeeded()) {
+//              request.response().statusCode = 200
+//              request.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+//            } else {
+//              println("Failed: ${pebble.cause()}")
+//            }
+//          }
+//        }
+//
+//        router.post("/create-database").handler { request ->
+//          val database = JsonObject()
+//          database.put("dbHost", request.request().getParam("dbHost"))
+//          database.put("dbPort", request.request().getParam("dbPort"))
+//          database.put("dbUser", request.request().getParam("dbUser"))
+//          database.put("dbPassword", request.request().getParam("dbPassword"))
+//          database.put("dbName", request.request().getParam("dbName"))
+//          configStore.config.put("database", database)
+//
+//          val templateData = JsonObject()
+//          templateData.put("title", "Step 4/4: Study")
+//          templateData.put(
+//            "sensors",
+//            getSensors("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml").toList()
+//          )
+//          templateData.put("plugins", getPlugins())
+//          templateData.put("schedulers", getSchedulers())
+//
+//          pebbleEngine.render(templateData, "templates/create-study.peb") { pebble ->
+//            if (pebble.succeeded()) {
+//              request.response().statusCode = 200
+//              request.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+//            } else {
+//              println("Failed: ${pebble.cause()}")
+//            }
+//          }
+//        }
+//
+//        vertx.createHttpServer(serverOptions)
+//          .requestHandler(router)
+//          .connectionHandler { httpConnection ->
+//            println("Connected from: ${httpConnection.remoteAddress()}")
+//          }
+//          .listen(8000) { server ->
+//            if (server.succeeded()) {
+//              startPromise.complete()
+//              println("AWARE Micro is ready to configure at https://localhost:8000")
+//            } else {
+//              println("AWARE Micro failed: ${server.cause()}")
+//              startPromise.fail(server.cause());
+//            }
+//          }
+//        println(getSensors("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml").encodePrettily())

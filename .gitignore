@@ -188,3 +188,6 @@ nbdist/
 /build/
 /.idea/
 /src/main/resources/cache/
+
+#server config
+aware-config.json
