@@ -6,6 +6,8 @@ import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.file.OpenOptions
+import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.json.JsonArray
@@ -13,7 +15,12 @@ import io.vertx.core.json.JsonObject
 import io.vertx.core.net.PemKeyCertOptions
 import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.ext.web.Router
+import io.vertx.ext.web.client.WebClient
+import io.vertx.ext.web.client.WebClientOptions
+import io.vertx.ext.web.codec.BodyCodec
 import io.vertx.ext.web.handler.BodyHandler
+import io.vertx.ext.web.handler.StaticHandler
+import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
 import io.vertx.kotlin.core.json.get
 import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
@@ -27,9 +34,11 @@ class MainVerticle : AbstractVerticle() {
     println("AWARE Micro: initializing...")
 
     val serverOptions = HttpServerOptions()
+    val pebbleEngine = PebbleTemplateEngine.create(vertx)
 
     val router = Router.router(vertx)
     router.route().handler(BodyHandler.create())
+    router.route("/cache/*").handler(StaticHandler.create("cache"))
 
     val configStore = ConfigStoreOptions()
       .setType("file")
@@ -46,10 +55,10 @@ class MainVerticle : AbstractVerticle() {
       if (config.succeeded() && config.result().containsKey("server")) {
 
         val parameters = config.result()
-        //println("Loaded configuration: ${config.result().encodePrettily()}")
-
         val serverConfig = parameters.getJsonObject("server")
+
         println("Server config: ${serverConfig.encodePrettily()}")
+
         if (serverConfig.getString("key_pem").isNotEmpty() && serverConfig.getString("cert_pem").isNotEmpty()) {
           serverOptions.pemKeyCertOptions = PemKeyCertOptions().setKeyPath(serverConfig.getString("key_pem"))
             .setCertPath(serverConfig.getString("cert_pem"))
@@ -60,53 +69,108 @@ class MainVerticle : AbstractVerticle() {
         serverOptions.isSsl = true
 
         val study = parameters.getJsonObject("study")
+
         println("Study info: ${study.encodePrettily()}")
 
+        val sensors = JsonArray()
+        val plugins = JsonArray()
+
         router.route(HttpMethod.GET, "/:studyKey").handler { route ->
+          vertx.fileSystem()
+            .open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
+              if (write.succeeded()) {
+                val asyncQrcode = write.result()
+
+                val webClientOptions = WebClientOptions()
+                  .setKeepAlive(true)
+                  .setPipelining(true)
+                  .setFollowRedirects(true)
+                  .setSsl(true)
+                  .setTrustAll(true)
+
+                val client = WebClient.create(vertx, webClientOptions)
+                client.get(443, "chart.googleapis.com",
+                  "/chart?chs=300x300&cht=qr&chl=${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getString("study_key")}&choe=UTF-8"
+                )
+                  .`as`(BodyCodec.pipe(asyncQrcode, true))
+                  .send { request ->
+                    if (request.succeeded()) {
+                      pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
+                        if (pebble.succeeded()) {
+                          route.response().statusCode = 200
+                          route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                        }
+                      }
+                    } else {
+                      println("QRCode failed: ${request.cause().message}")
+                    }
+                  }
+              }
+            }
+        }
+
+        router.route(HttpMethod.POST, "/:studyKey").handler { route ->
           if (route.request().getParam("studyKey") == study.getString("study_key")) {
 
-            route.response().statusCode = 200
-
-            val sensors = JsonArray()
             val awareSensors = parameters.getJsonArray("sensors")
-            for (i in 0..awareSensors.size()) {
+
+            for (i in 0 until awareSensors.size()) {
               val awareSensor = awareSensors.getJsonObject(i)
-              sensors.add(
-                JsonObject()
-                  .put("setting", awareSensor.getJsonArray("settings").getJsonObject(0).getString("setting"))
-                  .put("value", awareSensor.getJsonArray("settings").getJsonObject(0).getString("defaultValue"))
-              )
-              sensors.add(awareSensor)
+              val sensorSettings = awareSensor.getJsonArray("settings")
+              for (j in 0 until sensorSettings.size()) {
+                val setting = sensorSettings.getJsonObject(j)
+
+                val awareSetting = JsonObject()
+                awareSetting.put("setting", setting.getString("setting"))
+
+                when (setting.getString("setting")) {
+                  "status_webservice" -> awareSetting.put("value", "true")
+                  "webservice_server" -> awareSetting.put(
+                    "value",
+                    "${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getString(
+                      "study_key"
+                    )}"
+                  )
+                  else -> awareSetting.put("value", setting.getString("defaultValue"))
+                }
+                sensors.add(awareSetting)
+              }
             }
 
-            //TODO add plugins settings to the study config
+            var awareSetting = JsonObject()
+            awareSetting.put("setting", "study_id")
+            awareSetting.put("value", study.getString("study_key"))
+            sensors.add(awareSetting)
 
-            //Default settings
-//            sensors.add(
-//              JsonObject()
-//                .put("setting", "status_webservice")
-//                .put("value", true)
-//            )
-//            sensors.add(
-//              JsonObject()
-//                .put("setting", "webservice_server")
-//                .put(
-//                  "value",
-//                  "${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getString("study_key")}"
-//                )
-//            )
-//            sensors.add(
-//              JsonObject()
-//                .put("setting", "study_id")
-//                .put("value", study.getString("studyKey"))
-//            )
-//            sensors.add(
-//              JsonObject()
-//                .put("setting", "study_start")
-//                .put("value", System.currentTimeMillis())
-//            )
+            awareSetting = JsonObject()
+            awareSetting.put("setting", "study_start")
+            awareSetting.put("value", System.currentTimeMillis())
+            sensors.add(awareSetting)
 
-            route.response().putHeader("content-type", "application/json").end(study.encode())
+            val awarePlugins = parameters.getJsonArray("plugins")
+            for (i in 0 until awarePlugins.size()) {
+              val awarePlugin = awarePlugins.getJsonObject(i)
+              val pluginSettings = awarePlugin.getJsonArray("settings")
+
+              val pluginOutput = JsonObject()
+              pluginOutput.put("plugin", awarePlugin.getString("package_name"))
+
+              val pluginSettingsOutput = JsonArray()
+              for (j in 0 until pluginSettings.size()) {
+                val setting = pluginSettings.getJsonObject(j)
+                val settingOutput = JsonObject()
+                settingOutput.put("setting", setting.getString("setting"))
+                settingOutput.put("value", setting.getString("defaultValue"))
+                pluginSettingsOutput.add(settingOutput)
+              }
+              pluginOutput.put("settings", pluginSettingsOutput)
+
+              plugins.add(pluginOutput)
+            }
+
+            val output = JsonArray()
+            output.add(JsonObject().put("sensors", sensors).put("plugins", plugins))
+            route.response().end(output.encodePrettily())
 
           } else {
             route.response().statusCode = 404
@@ -116,6 +180,14 @@ class MainVerticle : AbstractVerticle() {
 
         router.route(HttpMethod.GET, "/").handler { route ->
           route.response().putHeader("content-type", "text").end("Hello from AWARE Micro")
+        }
+
+        router.errorHandler(500) { route ->
+          println("500: ${route.failure().cause?.message}")
+        }
+
+        router.errorHandler(404) { route ->
+          println("404: ${route.failure().cause?.message}")
         }
 
         vertx.createHttpServer(serverOptions).requestHandler(router)

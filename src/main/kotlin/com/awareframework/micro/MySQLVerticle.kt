@@ -8,7 +8,5 @@ class MySQLVerticle : AbstractVerticle() {
   override fun start(startPromise: Promise<Void>?) {
     super.start(startPromise)
     println("Starting MySQL connector")
-
-
   }
 }

@@ -1,0 +1,5 @@
+{% extends './common/base.peb' %}
+
+{% block content %}
+<img src="/cache/qrcode.png" width="300px" height="300px" />
+{% endblock content %}
