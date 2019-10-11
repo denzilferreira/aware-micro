@@ -77,7 +77,7 @@ class MainVerticle : AbstractVerticle() {
 
         router.route(HttpMethod.GET, "/:studyKey").handler { route ->
           vertx.fileSystem()
-            .open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
+            .open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setTruncateExisting(true)) { write ->
               if (write.succeeded()) {
                 val asyncQrcode = write.result()
 
@@ -90,7 +90,7 @@ class MainVerticle : AbstractVerticle() {
 
                 val client = WebClient.create(vertx, webClientOptions)
                 client.get(443, "chart.googleapis.com",
-                  "/chart?chs=300x300&cht=qr&chl=${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getString("study_key")}&choe=UTF-8"
+                  "/chart?chs=300x300&cht=qr&chl=${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/42/${study.getString("study_key")}&choe=UTF-8"
                 )
                   .`as`(BodyCodec.pipe(asyncQrcode, true))
                   .send { request ->
