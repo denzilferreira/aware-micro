@@ -1,0 +1,9 @@
+version: "3"
+services:
+  aware-micro:
+    build: .
+    command: ["clean", "run"]
+    container_name: aware-micro
+    image: aware-micro
+    ports:
+      - "8080:8080"

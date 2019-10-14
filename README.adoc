@@ -31,6 +31,20 @@ cd aware-micro
 
 ```
 
+
+== Running with docker
+
+To launch your tests:
+```
+docker-compose run aware-micro clean test
+```
+
+To run your application:
+```
+docker-compose up
+```
+
+
 == Help
 
 * https://vertx.io/docs/[Vert.x Documentation]
