@@ -60,13 +60,16 @@ class MainVerticle : AbstractVerticle() {
         println("Server config: ${serverConfig.encodePrettily()}")
 
         if (serverConfig.getString("key_pem").isNotEmpty() && serverConfig.getString("cert_pem").isNotEmpty()) {
-          serverOptions.pemKeyCertOptions = PemKeyCertOptions().setKeyPath(serverConfig.getString("key_pem"))
+          serverOptions.pemKeyCertOptions = PemKeyCertOptions()
+            .setKeyPath(serverConfig.getString("key_pem"))
             .setCertPath(serverConfig.getString("cert_pem"))
         } else {
-          val selfSigned = SelfSignedCertificate.create()
+          val selfSigned = SelfSignedCertificate.create(serverConfig.getString("server_domain"))
           serverOptions.keyCertOptions = selfSigned.keyCertOptions()
+          serverOptions.trustOptions = selfSigned.trustOptions()
         }
         serverOptions.isSsl = true
+        serverOptions.host = serverConfig.getString("server_domain")
 
         val study = parameters.getJsonObject("study")
 
@@ -75,42 +78,53 @@ class MainVerticle : AbstractVerticle() {
         val sensors = JsonArray()
         val plugins = JsonArray()
 
-        router.route(HttpMethod.GET, "/:studyKey").handler { route ->
-          vertx.fileSystem()
-            .open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setTruncateExisting(true)) { write ->
-              if (write.succeeded()) {
-                val asyncQrcode = write.result()
+        router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
 
-                val webClientOptions = WebClientOptions()
-                  .setKeepAlive(true)
-                  .setPipelining(true)
-                  .setFollowRedirects(true)
-                  .setSsl(true)
-                  .setTrustAll(true)
+          if (route.request().getParam("studyNumber").toInt() == study.getInteger("study_number", 1)) {
+            vertx.fileSystem()
+              .open(
+                "src/main/resources/cache/qrcode.png",
+                OpenOptions().setCreate(true).setWrite(true).setTruncateExisting(true)
+              ) { write ->
+                if (write.succeeded()) {
+                  val asyncQrcode = write.result()
 
-                val client = WebClient.create(vertx, webClientOptions)
-                client.get(443, "chart.googleapis.com",
-                  "/chart?chs=300x300&cht=qr&chl=${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/42/${study.getString("study_key")}&choe=UTF-8"
-                )
-                  .`as`(BodyCodec.pipe(asyncQrcode, true))
-                  .send { request ->
-                    if (request.succeeded()) {
-                      pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
-                        if (pebble.succeeded()) {
-                          route.response().statusCode = 200
-                          route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                  val webClientOptions = WebClientOptions()
+                    .setKeepAlive(true)
+                    .setPipelining(true)
+                    .setFollowRedirects(true)
+                    .setSsl(true)
+                    .setTrustAll(true)
+
+                  val client = WebClient.create(vertx, webClientOptions)
+                  client.get(
+                    443, "chart.googleapis.com",
+                    "/chart?chs=300x300&cht=qr&chl=https://${serverConfig.getString("server_domain")}:${serverConfig.getInteger(
+                      "api_port"
+                    )}/${study.getInteger("study_number")}/${study.getString("study_key")}&choe=UTF-8"
+                  )
+                    .`as`(BodyCodec.pipe(asyncQrcode, true))
+                    .send { request ->
+                      if (request.succeeded()) {
+                        pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
+                          if (pebble.succeeded()) {
+                            route.response().statusCode = 200
+                            route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                          }
                         }
+                      } else {
+                        println("QRCode failed: ${request.cause().message}")
                       }
-                    } else {
-                      println("QRCode failed: ${request.cause().message}")
                     }
-                  }
+                }
               }
-            }
+          }
         }
 
-        router.route(HttpMethod.POST, "/:studyKey").handler { route ->
-          if (route.request().getParam("studyKey") == study.getString("study_key")) {
+        router.route(HttpMethod.POST, "/:studyNumber/:studyKey").handler { route ->
+          if (route.request().getParam("studyKey") == study.getString("study_key")
+            && route.request().getParam("studyNumber").toInt() == study.getInteger("study_number")
+          ) {
 
             val awareSensors = parameters.getJsonArray("sensors")
 
@@ -127,9 +141,9 @@ class MainVerticle : AbstractVerticle() {
                   "status_webservice" -> awareSetting.put("value", "true")
                   "webservice_server" -> awareSetting.put(
                     "value",
-                    "${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getString(
-                      "study_key"
-                    )}"
+                    "https://${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getInteger(
+                      "study_number"
+                    )}/${study.getString("study_key")}"
                   )
                   else -> awareSetting.put("value", setting.getString("defaultValue"))
                 }
@@ -174,20 +188,14 @@ class MainVerticle : AbstractVerticle() {
 
           } else {
             route.response().statusCode = 404
-            route.response().end("Invalid key")
+            route.response().end("Invalid study key or number")
           }
         }
 
         router.route(HttpMethod.GET, "/").handler { route ->
-          route.response().putHeader("content-type", "text").end("Hello from AWARE Micro")
-        }
-
-        router.errorHandler(500) { route ->
-          println("500: ${route.failure().cause?.message}")
-        }
-
-        router.errorHandler(404) { route ->
-          println("404: ${route.failure().cause?.message}")
+          route.response().putHeader("content-type", "text").end("Hello from AWARE Micro - https://${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getInteger(
+            "study_number"
+          )}/${study.getString("study_key")}")
         }
 
         vertx.createHttpServer(serverOptions).requestHandler(router)
@@ -195,7 +203,7 @@ class MainVerticle : AbstractVerticle() {
             if (server.succeeded()) {
               startPromise.complete()
               println(
-                "AWARE Micro is available at ${serverConfig.getString("server_domain")}:${serverConfig.getInteger(
+                "AWARE Micro is available at https://${serverConfig.getString("server_domain")}:${serverConfig.getInteger(
                   "api_port"
                 )}"
               )
@@ -218,13 +226,14 @@ class MainVerticle : AbstractVerticle() {
         server.put("cert_pem", "")
         server.put("key_pem", "")
         server.put("database_port", 3306)
-        server.put("server_domain", "https://localhost")
+        server.put("server_domain", "localhost")
         server.put("api_port", 8080)
         configFile.put("server", server)
 
         //study info
         val study = JsonObject()
         study.put("study_key", "studyKey")
+        study.put("study_number", 1)
         study.put("study_name", "AWARE Micro demo study")
         study.put("study_description", "This is a demo study to test AWARE Micro")
         study.put("researcher_first", "First Name")

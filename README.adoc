@@ -21,6 +21,16 @@ To run your application:
 ./gradlew clean run
 ```
 
+== Deploying server
+
+```
+sudo apt install default-jdk
+git clone https://github.com/denzilferreira/aware-micro.git
+cd aware-micro
+./gradlew clean build run
+
+```
+
 == Help
 
 * https://vertx.io/docs/[Vert.x Documentation]
