@@ -16,6 +16,8 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
+      - aws s3 cp s3://aware-micro/certs/cert.pem .
+      - aws s3 cp s3://aware-micro/certs/privkey.pem .
       - docker build --build-arg DB_ENGINE=$DB_ENGINE --build-arg DB_NAME=$DB_NAME --build-arg DB_USER=$DB_USER --build-arg DB_PWD=$DB_PWD --build-arg DB_PORT=$DB_PORT --build-arg SERVER_DOMAIN=$SERVER_DOMAIN --build-arg API_PORT=$API_PORT -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
   post_build:
