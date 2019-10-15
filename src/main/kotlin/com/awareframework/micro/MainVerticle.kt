@@ -34,7 +34,7 @@ class MainVerticle : AbstractVerticle() {
     println("AWARE Micro: initializing...")
 
     val serverOptions = HttpServerOptions()
-    val pebbleEngine = PebbleTemplateEngine.create(vertx)
+    val pebbleEngine = PebbleTemplateEngine.create(vertx).setMaxCacheSize(0)
 
     val router = Router.router(vertx)
     router.route().handler(BodyHandler.create())
@@ -59,17 +59,17 @@ class MainVerticle : AbstractVerticle() {
 
         println("Server config: ${serverConfig.encodePrettily()}")
 
-        if (serverConfig.getString("key_pem").isNotEmpty() && serverConfig.getString("cert_pem").isNotEmpty()) {
+        if (serverConfig.getString("path_key_pem").isNotEmpty() && serverConfig.getString("path_cert_pem").isNotEmpty()) {
           serverOptions.pemKeyCertOptions = PemKeyCertOptions()
-            .setKeyPath(serverConfig.getString("key_pem"))
-            .setCertPath(serverConfig.getString("cert_pem"))
+            .setKeyPath(serverConfig.getString("path_key_pem"))
+            .setCertPath(serverConfig.getString("path_cert_pem"))
         } else {
-          val selfSigned = SelfSignedCertificate.create(serverConfig.getString("server_domain"))
+          val selfSigned = SelfSignedCertificate.create(serverConfig.getString("server_host"))
           serverOptions.keyCertOptions = selfSigned.keyCertOptions()
           serverOptions.trustOptions = selfSigned.trustOptions()
         }
         serverOptions.isSsl = true
-        serverOptions.host = serverConfig.getString("server_domain")
+        serverOptions.host = serverConfig.getString("server_host")
 
         val study = parameters.getJsonObject("study")
 
@@ -79,7 +79,6 @@ class MainVerticle : AbstractVerticle() {
         val plugins = JsonArray()
 
         router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
-
           if (route.request().getParam("studyNumber").toInt() == study.getInteger("study_number", 1)) {
             vertx.fileSystem()
               .open(
@@ -99,8 +98,8 @@ class MainVerticle : AbstractVerticle() {
                   val client = WebClient.create(vertx, webClientOptions)
                   client.get(
                     443, "chart.googleapis.com",
-                    "/chart?chs=300x300&cht=qr&chl=https://${serverConfig.getString("server_domain")}:${serverConfig.getInteger(
-                      "api_port"
+                    "/chart?chs=300x300&cht=qr&chl=${serverConfig.getString("server_host")}:${serverConfig.getInteger(
+                      "server_port"
                     )}/${study.getInteger("study_number")}/${study.getString("study_key")}&choe=UTF-8"
                   )
                     .`as`(BodyCodec.pipe(asyncQrcode, true))
@@ -127,7 +126,6 @@ class MainVerticle : AbstractVerticle() {
           ) {
 
             val awareSensors = parameters.getJsonArray("sensors")
-
             for (i in 0 until awareSensors.size()) {
               val awareSensor = awareSensors.getJsonObject(i)
               val sensorSettings = awareSensor.getJsonArray("settings")
@@ -141,7 +139,7 @@ class MainVerticle : AbstractVerticle() {
                   "status_webservice" -> awareSetting.put("value", "true")
                   "webservice_server" -> awareSetting.put(
                     "value",
-                    "https://${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getInteger(
+                    "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
                       "study_number"
                     )}/${study.getString("study_key")}"
                   )
@@ -193,18 +191,18 @@ class MainVerticle : AbstractVerticle() {
         }
 
         router.route(HttpMethod.GET, "/").handler { route ->
-          route.response().putHeader("content-type", "text").end("Hello from AWARE Micro - https://${serverConfig.getString("server_domain")}:${serverConfig.getInteger("api_port")}/${study.getInteger(
+          route.response().putHeader("content-type", "text/html").end("Hello from AWARE Micro - <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
             "study_number"
-          )}/${study.getString("study_key")}")
+          )}/${study.getString("study_key")}\">QRCode</a>")
         }
 
         vertx.createHttpServer(serverOptions).requestHandler(router)
-          .listen(serverConfig.getInteger("api_port")) { server ->
+          .listen(serverConfig.getInteger("server_port")) { server ->
             if (server.succeeded()) {
               startPromise.complete()
               println(
-                "AWARE Micro is available at https://${serverConfig.getString("server_domain")}:${serverConfig.getInteger(
-                  "api_port"
+                "AWARE Micro is available at ${serverConfig.getString("server_host")}:${serverConfig.getInteger(
+                  "server_port"
                 )}"
               )
             } else {
@@ -220,14 +218,15 @@ class MainVerticle : AbstractVerticle() {
         //infrastructure info
         val server = JsonObject()
         server.put("database_engine", "mysql")
+        server.put("database_host", "localhost")
         server.put("database_name", "studyDatabase")
         server.put("database_user", "databaseUser")
         server.put("database_pwd", "databasePassword")
-        server.put("cert_pem", "")
-        server.put("key_pem", "")
         server.put("database_port", 3306)
-        server.put("server_domain", "localhost")
-        server.put("api_port", 8080)
+        server.put("server_host", "localhost")
+        server.put("server_port", 8080)
+        server.put("path_cert_pem", "")
+        server.put("path_key_pem", "")
         configFile.put("server", server)
 
         //study info
