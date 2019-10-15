@@ -1,14 +1,14 @@
 {
   "server" : {
-    "database_engine" : "%AWARE_MICRO_DB_ENGINE%",
-    "database_name" : "%AWARE_MICRO_DB_NAME%",
-    "database_user" : "%AWARE_MICRO_DB_USER%",
-    "database_pwd" : "%AWARE_MICRO_DB_PWD%",
+    "database_engine" : "%DB_ENGINE%",
+    "database_name" : "%DB_NAME%",
+    "database_user" : "%DB_USER%",
+    "database_pwd" : "%DB_PWD%",
     "cert_pem" : "/aware-micro/cert.pem",
     "key_pem" : "/aware-micro/privkey.pem",
-    "database_port" : %AWARE_MICRO_DB_PORT%,
-    "server_domain" : "%AWARE_MICRO_SERVER_DOMAIN%",
-    "api_port" : %AWARE_MICRO_API_PORT%
+    "database_port" : %DB_PORT%,
+    "server_domain" : "%SERVER_DOMAIN%",
+    "api_port" : %API_PORT%
   },
   "study" : {
     "study_key" : "studyKey",

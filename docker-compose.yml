@@ -1,7 +1,16 @@
 version: "3"
 services:
   aware-micro:
-    build: .
+    build:
+      context: .
+      args:
+        DB_ENGINE: mysql
+        DB_NAME: studyDatabase
+        DB_USER: databaseUser
+        DB_PWD:  databasePassword
+        DB_PORT: 3306
+        SERVER_DOMAIN: localhost
+        API_PORT: 443
     command: ["clean", "run"]
     container_name: aware-micro
     image: aware-micro

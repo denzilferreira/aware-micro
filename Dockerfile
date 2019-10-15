@@ -3,6 +3,22 @@ LABEL maintainer="joaquin@nurelm.com"
 
 COPY . /aware-micro
 WORKDIR /aware-micro
-RUN /aware-micro/generate_aware_config.sh
-ENTRYPOINT ["/aware-micro/gradlew"]
+
+ARG DB_ENGINE
+ARG DB_NAME
+ARG DB_USER
+ARG DB_PWD
+ARG DB_PORT
+ARG SERVER_DOMAIN
+ARG API_PORT
+
+ENV DB_ENGINE $DB_ENGINE
+ENV DB_NAME $DB_NAME
+ENV DB_USER $DB_USER
+ENV DB_PWD $DB_PWD
+ENV DB_PORT $DB_PORT
+ENV SERVER_DOMAIN $SERVER_DOMAIN
+ENV API_PORT $API_PORT
+
+ENTRYPOINT ["/aware-micro/entrypoint.sh"]
 CMD ["clean", "build", "run"]
