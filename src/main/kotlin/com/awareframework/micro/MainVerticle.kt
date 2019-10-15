@@ -13,6 +13,7 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.core.net.PemKeyCertOptions
+import io.vertx.core.net.PemTrustOptions
 import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.client.WebClient
@@ -60,6 +61,9 @@ class MainVerticle : AbstractVerticle() {
         println("Server config: ${serverConfig.encodePrettily()}")
 
         if (serverConfig.getString("path_key_pem").isNotEmpty() && serverConfig.getString("path_cert_pem").isNotEmpty()) {
+          serverOptions.pemTrustOptions = PemTrustOptions().
+            addCertPath(serverConfig.getString("path_fullchain_pem"))
+
           serverOptions.pemKeyCertOptions = PemKeyCertOptions()
             .setKeyPath(serverConfig.getString("path_key_pem"))
             .setCertPath(serverConfig.getString("path_cert_pem"))
@@ -69,7 +73,6 @@ class MainVerticle : AbstractVerticle() {
           serverOptions.trustOptions = selfSigned.trustOptions()
         }
         serverOptions.isSsl = true
-        serverOptions.host = serverConfig.getString("server_host")
 
         val study = parameters.getJsonObject("study")
 
@@ -225,6 +228,7 @@ class MainVerticle : AbstractVerticle() {
         server.put("database_port", 3306)
         server.put("server_host", "localhost")
         server.put("server_port", 8080)
+        server.put("path_fullchain_pem", "")
         server.put("path_cert_pem", "")
         server.put("path_key_pem", "")
         configFile.put("server", server)
