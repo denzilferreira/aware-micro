@@ -6,4 +6,6 @@ services:
     container_name: aware-micro
     image: aware-micro
     ports:
-      - "8080:8080"
+      - "443:443"
+    volumes:
+      - "${PWD}:/aware-micro"

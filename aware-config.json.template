@@ -1,0 +1,846 @@
+{
+  "server" : {
+    "database_engine" : "%AWARE_MICRO_DB_ENGINE%",
+    "database_name" : "%AWARE_MICRO_DB_NAME%",
+    "database_user" : "%AWARE_MICRO_DB_USER%",
+    "database_pwd" : "%AWARE_MICRO_DB_PWD%",
+    "cert_pem" : "/aware-micro/cert.pem",
+    "key_pem" : "/aware-micro/privkey.pem",
+    "database_port" : %AWARE_MICRO_DB_PORT%,
+    "server_domain" : "%AWARE_MICRO_SERVER_DOMAIN%",
+    "api_port" : %AWARE_MICRO_API_PORT%
+  },
+  "study" : {
+    "study_key" : "studyKey",
+    "study_number" : 1,
+    "study_name" : "AWARE Micro demo study",
+    "study_description" : "This is a demo study to test AWARE Micro",
+    "researcher_first" : "First Name",
+    "researcher_last" : "Last Name",
+    "researcher_contact" : "your@email.com"
+  },
+  "sensors" : [ {
+    "sensor" : "accelerometer",
+    "title" : "Accelerometer",
+    "icon" : "@drawable/ic_action_accelerometer",
+    "summary" : "Acceleration, including the force of gravity (m/s^2)",
+    "settings" : [ {
+      "setting" : "status_accelerometer",
+      "title" : "Activate",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_accelerometer",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_accelerometer",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_accelerometer_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "applications",
+    "title" : "Applications",
+    "icon" : "@drawable/ic_action_applications",
+    "summary" : "Application usage",
+    "settings" : [ {
+      "setting" : "status_applications",
+      "title" : "Application usage",
+      "defaultValue" : "false",
+      "summary" : "Current visible and background applications"
+    }, {
+      "setting" : "frequency_applications",
+      "title" : "Background processes",
+      "defaultValue" : "0",
+      "summary" : "Update every X minute(s). 0 to disable."
+    }, {
+      "setting" : "status_installations",
+      "title" : "Application installations",
+      "defaultValue" : "false",
+      "summary" : "Application installs, uninstalls and updates"
+    }, {
+      "setting" : "status_keyboard",
+      "title" : "Keyboard",
+      "defaultValue" : "false",
+      "summary" : "Logs keyboard input (no passwords)"
+    }, {
+      "setting" : "mask_keyboard",
+      "title" : "Mask keyboard input",
+      "defaultValue" : "false",
+      "summary" : "Swaps all alphanumeric characters by A, a, and 1"
+    }, {
+      "setting" : "status_notifications",
+      "title" : "Application notifications",
+      "defaultValue" : "false",
+      "summary" : "Notifications sent by any application, without text content"
+    }, {
+      "setting" : "status_crashes",
+      "title" : "Application crashes",
+      "defaultValue" : "false",
+      "summary" : "Log crashes (error and ANR), with ADB trace"
+    } ]
+  }, {
+    "sensor" : "barometer",
+    "title" : "Barometer",
+    "icon" : "@drawable/ic_action_barometer",
+    "summary" : "Atmospheric air pressure (mbar/hPa)",
+    "settings" : [ {
+      "setting" : "status_barometer",
+      "title" : "Activate",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_barometer",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_barometer",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_barometer_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "battery",
+    "title" : "Battery",
+    "icon" : "@drawable/ic_action_battery",
+    "summary" : "Battery and power events",
+    "settings" : [ {
+      "setting" : "status_battery",
+      "title" : "Activate",
+      "defaultValue" : "false"
+    } ]
+  }, {
+    "sensor" : "bluetooth",
+    "title" : "Bluetooth",
+    "icon" : "@drawable/ic_action_bluetooth",
+    "summary" : "Bluetooth sensing",
+    "settings" : [ {
+      "setting" : "status_bluetooth",
+      "title" : "Activate",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_bluetooth",
+      "title" : "Scanning update frequency",
+      "defaultValue" : "60",
+      "summary" : "X seconds"
+    } ]
+  }, {
+    "sensor" : "communication",
+    "title" : "Communication",
+    "icon" : "@drawable/ic_action_communication",
+    "summary" : "Communication usage (calls/messages)",
+    "settings" : [ {
+      "setting" : "status_calls",
+      "title" : "Call events",
+      "defaultValue" : "false",
+      "summary" : "Calls made, received, missed"
+    }, {
+      "setting" : "status_messages",
+      "title" : "Message events",
+      "defaultValue" : "false",
+      "summary" : "Sent or received SMS/MMS"
+    } ]
+  }, {
+    "sensor" : "esm",
+    "title" : "Mobile ESM/EMA",
+    "icon" : "@drawable/ic_action_esm",
+    "summary" : "Mobile questionnaires",
+    "settings" : [ {
+      "setting" : "status_esm",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Allow remote and applications ESM requests for human-based sensing"
+    } ]
+  }, {
+    "sensor" : "gravity",
+    "title" : "Gravity",
+    "icon" : "@drawable/ic_action_gravity",
+    "summary" : "Force of gravity as a 3D vector with direction and magnitude of gravity (m/s^2)",
+    "settings" : [ {
+      "setting" : "status_gravity",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_gravity",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_gravity",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_gravity_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "gyroscope",
+    "title" : "Gyroscope",
+    "icon" : "@drawable/ic_action_gyroscope",
+    "summary" : "Rate of rotation of device (rad/s)",
+    "settings" : [ {
+      "setting" : "status_gyroscope",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_gyroscope",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_gyroscope",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_gyroscope_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "locations",
+    "title" : "Locations",
+    "icon" : "@drawable/ic_action_locations",
+    "summary" : "User's estimated location by GPS and network triangulation",
+    "settings" : [ {
+      "setting" : "status_location_gps",
+      "title" : "GPS",
+      "defaultValue" : "false",
+      "summary" : "GPS location tracking"
+    }, {
+      "setting" : "frequency_location_gps",
+      "title" : "Minimum GPS update frequency",
+      "defaultValue" : "180",
+      "summary" : "Seconds (0 = always on)"
+    }, {
+      "setting" : "min_location_gps_accuracy",
+      "title" : "Movement threshold for GPS updates",
+      "defaultValue" : "150",
+      "summary" : "Meters (0 = always on)"
+    }, {
+      "setting" : "status_location_network",
+      "title" : "Triangulation (cell tower and Wi-Fi)",
+      "defaultValue" : "false",
+      "summary" : "Triangulation location tracking"
+    }, {
+      "setting" : "frequency_location_network",
+      "title" : "Minimum triangulation update frequency",
+      "defaultValue" : "300",
+      "summary" : "Seconds (0 = always on)"
+    }, {
+      "setting" : "min_location_network_accuracy",
+      "title" : "Movement threshold for triangulation updates",
+      "defaultValue" : "1500",
+      "summary" : "Meters (0 = always on)"
+    }, {
+      "setting" : "status_location_passive",
+      "title" : "Passive location provider",
+      "defaultValue" : "false",
+      "summary" : "Don't fetch locations, but use locations if other apps request them."
+    }, {
+      "setting" : "location_expiration_time",
+      "title" : "Location fix lifetime",
+      "defaultValue" : "300",
+      "summary" : "Expire after X seconds"
+    }, {
+      "setting" : "location_save_all",
+      "title" : "Save all locations",
+      "defaultValue" : "false",
+      "summary" : "Don't use heuristics to only record best locations"
+    } ]
+  }, {
+    "sensor" : "light",
+    "title" : "Light",
+    "icon" : "@drawable/ic_action_light",
+    "summary" : "Ambient light (lux)",
+    "settings" : [ {
+      "setting" : "status_light",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_light",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_light",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_light_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "linear_accelerometer",
+    "title" : "Linear accelerometer",
+    "icon" : "@drawable/ic_action_linear_accelerometer",
+    "summary" : "Acceleration, w/o gravity (m/s^2)",
+    "settings" : [ {
+      "setting" : "status_linear_accelerometer",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_linear_accelerometer",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_linear_accelerometer",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_linear_accelerometer_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "network",
+    "title" : "Network",
+    "icon" : "@drawable/ic_action_network",
+    "summary" : "Network usage and traffic",
+    "settings" : [ {
+      "setting" : "status_network_events",
+      "title" : "Network events",
+      "defaultValue" : "false",
+      "summary" : "Network usage states"
+    }, {
+      "setting" : "status_network_traffic",
+      "title" : "Network traffic",
+      "defaultValue" : "false",
+      "summary" : "Wi-Fi & mobile network traffic (bytes,packets)"
+    } ]
+  }, {
+    "sensor" : "magnetometer",
+    "title" : "Magnetometer",
+    "icon" : "@drawable/ic_action_magnetometer",
+    "summary" : "Geomagnetic field strength around the device (µT)",
+    "settings" : [ {
+      "setting" : "status_magnetometer",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_magnetometer",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_magnetometer",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_magnetometer_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "processor",
+    "title" : "Processor workload",
+    "icon" : "@drawable/ic_action_processor",
+    "summary" : "CPU workload for user, system and idle (%)",
+    "settings" : [ {
+      "setting" : "status_processor",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_processor",
+      "title" : "Update frequency",
+      "defaultValue" : "10",
+      "summary" : "Every X seconds"
+    } ]
+  }, {
+    "sensor" : "timezone",
+    "title" : "Timezone",
+    "icon" : "@drawable/ic_action_timezone",
+    "summary" : "Tracks user's current timezone",
+    "settings" : [ {
+      "setting" : "status_timezone",
+      "title" : "Active",
+      "defaultValue" : "false"
+    } ]
+  }, {
+    "sensor" : "proximity",
+    "title" : "Proximity",
+    "icon" : "@drawable/ic_action_proximity",
+    "summary" : "Proximity sensor distance (HW-dependent value for far and near)",
+    "settings" : [ {
+      "setting" : "status_proximity",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_proximity",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_proximity",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_proximity_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "rotation",
+    "title" : "Rotation",
+    "icon" : "@drawable/ic_action_rotation",
+    "summary" : "Orientation of the device in all axis",
+    "settings" : [ {
+      "setting" : "status_rotation",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_rotation",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_rotation",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_rotation_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "screen",
+    "title" : "Screen usage",
+    "icon" : "@drawable/ic_action_screen",
+    "summary" : "Screen events (on, off, locked, unlocked)",
+    "settings" : [ {
+      "setting" : "status_screen",
+      "title" : "Screen usage",
+      "defaultValue" : "false",
+      "summary" : "Capture screen events (on, off, locked, unlocked)"
+    }, {
+      "setting" : "status_touch",
+      "title" : "Screen interaction",
+      "defaultValue" : "false",
+      "summary" : "Capture clicks, long clicks and scroll up/down events"
+    }, {
+      "setting" : "mask_touch_text",
+      "title" : "Mask text in touch events",
+      "defaultValue" : "false",
+      "summary" : "Swaps all alphanumeric characters by A, a, and 1"
+    } ]
+  }, {
+    "sensor" : "significant_motion",
+    "title" : "Significant motion",
+    "icon" : "@drawable/ic_action_significant_motion",
+    "summary" : "Significant motion",
+    "settings" : [ {
+      "setting" : "status_significant_motion",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Log motion events. Saves battery life, stops motion sensors logs if idle!"
+    } ]
+  }, {
+    "sensor" : "temperature",
+    "title" : "Temperature",
+    "icon" : "@drawable/ic_action_temperature",
+    "summary" : "Ambient air temperature (Celsius)",
+    "settings" : [ {
+      "setting" : "status_temperature",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_temperature",
+      "title" : "Sampling rate",
+      "defaultValue" : "200000"
+    }, {
+      "setting" : "threshold_temperature",
+      "title" : "Sensitivity (0 = disabled)",
+      "defaultValue" : "0",
+      "summary" : "e.g., log only if [x,y,z] >= 0.01"
+    }, {
+      "setting" : "frequency_temperature_enforce",
+      "title" : "Enforce the frequency",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than frequency, ignore them."
+    } ]
+  }, {
+    "sensor" : "telephony",
+    "title" : "Telephony",
+    "icon" : "@drawable/ic_action_telephony",
+    "summary" : "Cell operator, current cell tower and neighbor towers",
+    "settings" : [ {
+      "setting" : "status_telephony",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Cell operator, current cell tower and neighbor towers"
+    } ]
+  }, {
+    "sensor" : "wifi",
+    "title" : "Wi-Fi",
+    "icon" : "@drawable/ic_action_wifi",
+    "summary" : "Wi-Fi sensing",
+    "settings" : [ {
+      "setting" : "status_wifi",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "frequency_wifi",
+      "title" : "Wi-Fi scanning update frequency",
+      "defaultValue" : "60",
+      "summary" : "Every X seconds. Default 60 seconds (recommended)"
+    } ]
+  }, {
+    "sensor" : "mqtt",
+    "title" : "MQTT Server",
+    "icon" : "@drawable/ic_action_mqtt",
+    "summary" : "Allows remove questionnaires, P2P context exchange",
+    "settings" : [ {
+      "setting" : "status_mqtt",
+      "title" : "Connect",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "mqtt_port",
+      "title" : "MQTT port",
+      "defaultValue" : "1883",
+      "summary" : "Non-encrypted: 1883, encrypted: 8883"
+    }, {
+      "setting" : "mqtt_keep_alive",
+      "title" : "MQTT keep alive",
+      "defaultValue" : "600",
+      "summary" : "Every X seconds"
+    }, {
+      "setting" : "mqtt_qos",
+      "title" : "MQTT QoS",
+      "defaultValue" : "2",
+      "summary" : "0 - No guarantee, 1 - At least once, 2 - Exactly once (default = 2)"
+    } ]
+  }, {
+    "sensor" : "webservice",
+    "title" : "AWARE Study",
+    "icon" : "@drawable/ic_action_webservice",
+    "summary" : "Study and sync settings",
+    "settings" : [ {
+      "setting" : "status_webservice",
+      "title" : "Active",
+      "defaultValue" : "false"
+    }, {
+      "setting" : "webservice_server",
+      "title" : "Study URL",
+      "defaultValue" : "https://api.awareframework.com/index.php",
+      "summary" : "URL"
+    }, {
+      "setting" : "webservice_wifi_only",
+      "title" : "Wi-Fi only",
+      "defaultValue" : "false",
+      "summary" : "Sync only over Wi-Fi"
+    }, {
+      "setting" : "fallback_network",
+      "title" : "Fallback to 3G after x hours",
+      "defaultValue" : "0"
+    }, {
+      "setting" : "webservice_charging",
+      "title" : "Charging only",
+      "defaultValue" : "false",
+      "summary" : "Sync only if charging"
+    }, {
+      "setting" : "frequency_webservice",
+      "title" : "Sync interval (0 to disable)",
+      "defaultValue" : "30",
+      "summary" : "Every X minutes"
+    }, {
+      "setting" : "frequency_clean_old_data",
+      "title" : "Clean-up old data?",
+      "defaultValue" : "0"
+    }, {
+      "setting" : "webservice_silent",
+      "title" : "Quiet sync",
+      "defaultValue" : "false",
+      "summary" : "Disable data sync notifications"
+    }, {
+      "setting" : "remind_to_charge",
+      "title" : "Battery reminder",
+      "defaultValue" : "false",
+      "summary" : "Remind to charge when 15%"
+    }, {
+      "setting" : "foreground_priority",
+      "title" : "Foreground priority",
+      "defaultValue" : "true",
+      "summary" : "RECOMMENDED to keep AWARE running non-stop."
+    } ]
+  }, {
+    "sensor" : "advanced",
+    "title" : "Advanced options",
+    "summary" : "For advanced users and developers",
+    "settings" : [ {
+      "setting" : "debug_flag",
+      "title" : "Debugging",
+      "defaultValue" : "true",
+      "summary" : "Show messages in logcat"
+    }, {
+      "setting" : "debug_tag",
+      "title" : "Logcat TAG",
+      "defaultValue" : "AWARE",
+      "summary" : "Change logcat tag for debug filters (default = AWARE)"
+    }, {
+      "setting" : "debug_db_slow",
+      "title" : "Lightweight sampling",
+      "defaultValue" : "false",
+      "summary" : "Disable database logs for high-frequency sensors"
+    }, {
+      "setting" : "webservice_simple",
+      "title" : "Simple webservice",
+      "defaultValue" : "false",
+      "summary" : "Disable database metadata sync to server"
+    }, {
+      "setting" : "webservice_remove_data",
+      "title" : "Wipe data on upload",
+      "defaultValue" : "false",
+      "summary" : "WARNING: This may cause problems with some sensors or plugins if they rely on history data (e.g., battery charges, discharges, ...)"
+    }, {
+      "setting" : "interface_locked",
+      "title" : "Participant interface mode",
+      "defaultValue" : "false",
+      "summary" : "Simplifies the interface for participants after joining a study"
+    }, {
+      "setting" : "frequency_enforce_all",
+      "title" : "Enforce frequency of all sensors",
+      "defaultValue" : "false",
+      "summary" : "If Android gives points more often than the requested frequency, ignore them."
+    } ]
+  } ],
+  "plugins" : [ {
+    "package_name" : "com.aware.plugin.ambient_noise",
+    "plugin" : "plugin_ambient_noise",
+    "settings" : [ {
+      "setting" : "status_plugin_ambient_noise",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Detects silent from noisy surroundings."
+    }, {
+      "setting" : "frequency_plugin_ambient_noise",
+      "title" : "How frequently to sample audio (in minutes)",
+      "defaultValue" : "5",
+      "summary" : "Every 5 minutes"
+    }, {
+      "setting" : "plugin_ambient_noise_sample_size",
+      "title" : "How long to sample for (in seconds)",
+      "defaultValue" : "30",
+      "summary" : "Listen 30 second(s)"
+    }, {
+      "setting" : "plugin_ambient_noise_silence_threshold",
+      "title" : "How loud is silence?",
+      "defaultValue" : "50",
+      "summary" : "Silent below 50dB"
+    }, {
+      "setting" : "plugin_ambient_noise_no_raw",
+      "title" : "Don't save raw audio",
+      "defaultValue" : "true",
+      "summary" : "If enabled, the audio is not recorded."
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.google.activity_recognition",
+    "plugin" : "plugin_google_activity_recognition",
+    "settings" : [ {
+      "setting" : "status_plugin_google_activity_recognition",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Detects: still, on foot (walking, running), in vehicle, on bicycle"
+    }, {
+      "setting" : "frequency_plugin_google_activity_recognition",
+      "title" : "Activity recognition interval (in seconds)",
+      "defaultValue" : "60",
+      "summary" : "60 seconds"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.sentimental",
+    "settings" : [ {
+      "setting" : "status_plugin_sentimental",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Enable/disable plugin"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.openweather",
+    "plugin" : "plugin_openweather",
+    "settings" : [ {
+      "setting" : "status_plugin_openweather",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Weather conditions from OpenWeather API"
+    }, {
+      "setting" : "units_plugin_openweather",
+      "title" : "Measurement unit",
+      "defaultValue" : "metric"
+    }, {
+      "setting" : "plugin_openweather_frequency",
+      "title" : "Update frequency",
+      "defaultValue" : "60",
+      "summary" : "Every 60 minute(s)"
+    }, {
+      "setting" : "api_key_plugin_openweather",
+      "title" : "API Key",
+      "defaultValue" : "ada11fb870974565377df238f3046aa9",
+      "summary" : "Get your free API key from openweathermap.org"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.esm.scheduler",
+    "plugin" : "plugin_esm_scheduler",
+    "settings" : [ {
+      "setting" : "status_plugin_esm_scheduler",
+      "defaultValue" : "false",
+      "summary" : "Activate/deactivate plugin"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.fitbit",
+    "plugin" : "plugin_fitbit",
+    "settings" : [ {
+      "setting" : "status_plugin_fitbit",
+      "defaultValue" : "false",
+      "summary" : "Activate/deactivate plugin"
+    }, {
+      "setting" : "units_plugin_fitbit",
+      "title" : "Measurement units",
+      "defaultValue" : "metric",
+      "summary" : "Metric"
+    }, {
+      "setting" : "fitbit_granularity",
+      "title" : "Fitbit intraday granularity",
+      "defaultValue" : "15min",
+      "summary" : "Every 15 minutes"
+    }, {
+      "setting" : "fitbit_hr_granularity",
+      "title" : "Heart rate granularity",
+      "defaultValue" : "1sec",
+      "summary" : "Every second"
+    }, {
+      "setting" : "plugin_fitbit_frequency",
+      "title" : "Update frequency",
+      "defaultValue" : "15",
+      "summary" : "Every 15 minute(s)"
+    }, {
+      "setting" : "api_key_plugin_fitbit",
+      "title" : "API Key",
+      "defaultValue" : "227YG3",
+      "summary" : "API Key from developer.fitbit.com"
+    }, {
+      "setting" : "api_secret_plugin_fitbit",
+      "title" : "API Secret",
+      "defaultValue" : "033ed2a3710c0cde04343d073c09e378",
+      "summary" : "API Secret from developer.fitbit.com"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.sensortag",
+    "settings" : [ {
+      "setting" : "status_plugin_sensortag",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Enable/disable sensor tag plugin"
+    }, {
+      "setting" : "frequency_plugin_sensortag",
+      "title" : "Sampling Frequency (Hz)",
+      "defaultValue" : "30",
+      "summary" : "30 Hz"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.contacts_list",
+    "plugin" : "plugin_contacts_list",
+    "settings" : [ {
+      "setting" : "status_plugin_contacts",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Activate/deactivate plugin"
+    }, {
+      "setting" : "frequency_plugin_contacts",
+      "title" : "Frequency (in days)",
+      "defaultValue" : "1",
+      "summary" : "Every 1 day(s)"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.google.auth",
+    "plugin" : "plugin_google_auth",
+    "settings" : [ {
+      "setting" : "status_plugin_google_login",
+      "defaultValue" : "false",
+      "summary" : "Activate/deactivate plugin"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.google.fused_location",
+    "plugin" : "plugin_google_fused_location",
+    "settings" : [ {
+      "setting" : "status_google_fused_location",
+      "defaultValue" : "false",
+      "summary" : "Activate/deactivate plugin"
+    }, {
+      "setting" : "frequency_google_fused_location",
+      "title" : "How frequently to acquire location (in seconds)",
+      "defaultValue" : "300",
+      "summary" : "Every 300 seconds"
+    }, {
+      "setting" : "max_frequency_google_fused_location",
+      "title" : "How fast your app handles locations (in seconds)",
+      "defaultValue" : "60",
+      "summary" : "Every 60 second(s)"
+    }, {
+      "setting" : "fallback_location_timeout",
+      "title" : "GPS satellite fix timeout",
+      "defaultValue" : "20",
+      "summary" : "Wait 20 seconds"
+    }, {
+      "setting" : "location_sensitivity",
+      "title" : "Motion sensitivity",
+      "defaultValue" : "5",
+      "summary" : "More than 5 meter(s)"
+    }, {
+      "setting" : "accuracy_google_fused_location",
+      "title" : "Location accuracy",
+      "defaultValue" : "102",
+      "summary" : "Medium (network + WiFi)"
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.device_usage",
+    "plugin" : "plugin_device_usage",
+    "settings" : [ {
+      "setting" : "status_plugin_device_usage",
+      "title" : "Active",
+      "defaultValue" : "false",
+      "summary" : "Logs device usage and non-usage."
+    } ]
+  }, {
+    "package_name" : "com.aware.plugin.studentlife.audio_final",
+    "plugin" : "plugin_conversations",
+    "settings" : [ {
+      "setting" : "status_plugin_studentlife_audio",
+      "title" : "Detect conversations",
+      "defaultValue" : "false",
+      "summary" : "Activate/deactivate plugin"
+    }, {
+      "setting" : "plugin_conversations_delay",
+      "title" : "Delay period",
+      "defaultValue" : "1",
+      "summary" : "How long we wait until we start classification (in minutes)"
+    }, {
+      "setting" : "plugin_conversations_off_duty",
+      "title" : "Time between samples",
+      "defaultValue" : "3",
+      "summary" : "How long we wait until we sample again (in minutes)"
+    }, {
+      "setting" : "plugin_conversations_length",
+      "title" : "Recording length",
+      "defaultValue" : "1",
+      "summary" : "For how long we collect data for (in minutes, >= delay period)"
+    } ]
+  } ]
+}
