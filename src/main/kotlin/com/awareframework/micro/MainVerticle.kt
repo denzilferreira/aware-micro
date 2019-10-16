@@ -28,7 +28,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 class MainVerticle : AbstractVerticle() {
 
-  lateinit var parameters: JsonObject
+  private lateinit var parameters: JsonObject
 
   override fun start(startPromise: Promise<Void>) {
 
@@ -41,7 +41,7 @@ class MainVerticle : AbstractVerticle() {
     router.route().handler(BodyHandler.create())
     router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
-      println("Processing: ${it.request().path()}")
+      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()} ${it.request().params().toList()}")
       it.next()
     }
 
@@ -59,15 +59,13 @@ class MainVerticle : AbstractVerticle() {
 
       if (config.succeeded() && config.result().containsKey("server")) {
 
-        val parameters = config.result()
+        parameters = config.result()
+
         val serverConfig = parameters.getJsonObject("server")
-        println("Server config: ${serverConfig.encodePrettily()}")
+        //println("Server config: ${serverConfig.encodePrettily()}")
 
         val study = parameters.getJsonObject("study")
-        println("Study info: ${study.encodePrettily()}")
-
-        val sensors = JsonArray()
-        val plugins = JsonArray()
+        //println("Study info: ${study.encodePrettily()}")
 
         /**
          * This route simply returns the QRCode to join the study from the client
@@ -119,6 +117,21 @@ class MainVerticle : AbstractVerticle() {
           }
         }
 
+        router.route(HttpMethod.POST, "/:studyNumber/:studyKey").handler { route ->
+          if (route.request().getFormAttribute("study_check").equals("1")) {
+
+            val statusOutput = JsonArray()
+            val status = JsonObject()
+            status.put("status", "true")
+            status.put("config", getStudyConfig().encode())
+            statusOutput.add(status)
+
+            println("Study status check: ${statusOutput.encodePrettily()}")
+
+            route.response().end(statusOutput.encode())
+          }
+        }
+
         /**
          * This route is called when joining the study, returns the JSON with all the settings from the study.
          * Can be called from apps using Aware.joinStudy(URL) or client's QRCode scanner
@@ -127,61 +140,7 @@ class MainVerticle : AbstractVerticle() {
           if (route.request().getParam("studyKey") == study.getString("study_key")
             && route.request().getParam("studyNumber").toInt() == study.getInteger("study_number")
           ) {
-
-            val awareSensors = parameters.getJsonArray("sensors")
-            for (i in 0 until awareSensors.size()) {
-              val awareSensor = awareSensors.getJsonObject(i)
-              val sensorSettings = awareSensor.getJsonArray("settings")
-              for (j in 0 until sensorSettings.size()) {
-                val setting = sensorSettings.getJsonObject(j)
-
-                val awareSetting = JsonObject()
-                awareSetting.put("setting", setting.getString("setting"))
-
-                when (setting.getString("setting")) {
-                  "status_webservice" -> awareSetting.put("value", "true")
-                  "webservice_server" -> awareSetting.put("value", "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger("study_number")}/${study.getString("study_key")}")
-                  else -> awareSetting.put("value", setting.getString("defaultValue"))
-                }
-                sensors.add(awareSetting)
-              }
-            }
-
-            var awareSetting = JsonObject()
-            awareSetting.put("setting", "study_id")
-            awareSetting.put("value", study.getString("study_key"))
-            sensors.add(awareSetting)
-
-            awareSetting = JsonObject()
-            awareSetting.put("setting", "study_start")
-            awareSetting.put("value", System.currentTimeMillis())
-            sensors.add(awareSetting)
-
-            val awarePlugins = parameters.getJsonArray("plugins")
-            for (i in 0 until awarePlugins.size()) {
-              val awarePlugin = awarePlugins.getJsonObject(i)
-              val pluginSettings = awarePlugin.getJsonArray("settings")
-
-              val pluginOutput = JsonObject()
-              pluginOutput.put("plugin", awarePlugin.getString("package_name"))
-
-              val pluginSettingsOutput = JsonArray()
-              for (j in 0 until pluginSettings.size()) {
-                val setting = pluginSettings.getJsonObject(j)
-                val settingOutput = JsonObject()
-                settingOutput.put("setting", setting.getString("setting"))
-                settingOutput.put("value", setting.getString("defaultValue"))
-                pluginSettingsOutput.add(settingOutput)
-              }
-              pluginOutput.put("settings", pluginSettingsOutput)
-
-              plugins.add(pluginOutput)
-            }
-
-            val output = JsonArray()
-            output.add(JsonObject().put("sensors", sensors).put("plugins", plugins))
-            route.response().end(output.encodePrettily())
-
+            route.response().end(getStudyConfig().encodePrettily())
           } else {
             route.response().statusCode = 404
             route.response().end("Invalid study key or number")
@@ -202,10 +161,23 @@ class MainVerticle : AbstractVerticle() {
          */
         router.route(HttpMethod.GET, "/index.php/webservice/client_get_study_info/:studyKey").handler { route ->
           if (route.request().getParam("studyKey") == study.getString("study_key")) {
-            println("Providing study configuration...")
+            println("Providing study configuration: ${study.encodePrettily()}")
             route.response().end(study.encode())
           } else {
             route.response().end("[]")
+          }
+        }
+
+        router.route(HttpMethod.POST, "/:studyNumber/:studyKey/:table/:operation").handler { route ->
+          if(route.request().getParam("studyKey") == study.getString("study_key") && route.request().getParam("studyNumber") == study.getString("study_id")) {
+            when(route.request().getParam("operation")) {
+              "create_table" -> {
+                //TODO connect to MySQL vertical, create empty table
+              }
+              else -> {
+                route.response().end("")
+              }
+            }
           }
         }
 
@@ -222,11 +194,7 @@ class MainVerticle : AbstractVerticle() {
           .listen(serverConfig.getInteger("server_port")) { server ->
             if (server.succeeded()) {
               startPromise.complete()
-              println(
-                "AWARE Micro is available at ${serverConfig.getString("server_host")}:${serverConfig.getInteger(
-                  "server_port"
-                )}"
-              )
+              println("AWARE Micro is available at ${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}")
             } else {
               startPromise.fail(server.cause());
               println("AWARE Micro failed: ${server.cause()}")
@@ -310,6 +278,71 @@ class MainVerticle : AbstractVerticle() {
         }
       }
     }
+  }
+
+  fun getStudyConfig() : JsonArray {
+    val serverConfig = parameters.getJsonObject("server")
+    //println("Server config: ${serverConfig.encodePrettily()}")
+
+    val study = parameters.getJsonObject("study")
+    //println("Study info: ${study.encodePrettily()}")
+
+    val sensors = JsonArray()
+    val plugins = JsonArray()
+
+    val awareSensors = parameters.getJsonArray("sensors")
+    for (i in 0 until awareSensors.size()) {
+      val awareSensor = awareSensors.getJsonObject(i)
+      val sensorSettings = awareSensor.getJsonArray("settings")
+      for (j in 0 until sensorSettings.size()) {
+        val setting = sensorSettings.getJsonObject(j)
+
+        val awareSetting = JsonObject()
+        awareSetting.put("setting", setting.getString("setting"))
+
+        when (setting.getString("setting")) {
+          "status_webservice" -> awareSetting.put("value", "true")
+          "webservice_server" -> awareSetting.put("value", "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger("study_number")}/${study.getString("study_key")}")
+          else -> awareSetting.put("value", setting.getString("defaultValue"))
+        }
+        sensors.add(awareSetting)
+      }
+    }
+
+    var awareSetting = JsonObject()
+    awareSetting.put("setting", "study_id")
+    awareSetting.put("value", study.getString("study_key"))
+    sensors.add(awareSetting)
+
+    awareSetting = JsonObject()
+    awareSetting.put("setting", "study_start")
+    awareSetting.put("value", System.currentTimeMillis())
+    sensors.add(awareSetting)
+
+    val awarePlugins = parameters.getJsonArray("plugins")
+    for (i in 0 until awarePlugins.size()) {
+      val awarePlugin = awarePlugins.getJsonObject(i)
+      val pluginSettings = awarePlugin.getJsonArray("settings")
+
+      val pluginOutput = JsonObject()
+      pluginOutput.put("plugin", awarePlugin.getString("package_name"))
+
+      val pluginSettingsOutput = JsonArray()
+      for (j in 0 until pluginSettings.size()) {
+        val setting = pluginSettings.getJsonObject(j)
+        val settingOutput = JsonObject()
+        settingOutput.put("setting", setting.getString("setting"))
+        settingOutput.put("value", setting.getString("defaultValue"))
+        pluginSettingsOutput.add(settingOutput)
+      }
+      pluginOutput.put("settings", pluginSettingsOutput)
+
+      plugins.add(pluginOutput)
+    }
+
+    val output = JsonArray()
+    output.add(JsonObject().put("sensors", sensors).put("plugins", plugins))
+    return output
   }
 
   /**
