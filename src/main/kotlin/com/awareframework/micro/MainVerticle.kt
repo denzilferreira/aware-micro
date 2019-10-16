@@ -35,11 +35,15 @@ class MainVerticle : AbstractVerticle() {
     println("AWARE Micro: initializing...")
 
     val serverOptions = HttpServerOptions()
-    val pebbleEngine = PebbleTemplateEngine.create(vertx).setMaxCacheSize(0)
+    val pebbleEngine = PebbleTemplateEngine.create(vertx)
 
     val router = Router.router(vertx)
     router.route().handler(BodyHandler.create())
     router.route("/cache/*").handler(StaticHandler.create("cache"))
+    router.route().handler {
+      println("Processing: ${it.request().path()}")
+      it.next()
+    }
 
     val configStore = ConfigStoreOptions()
       .setType("file")
@@ -57,36 +61,23 @@ class MainVerticle : AbstractVerticle() {
 
         val parameters = config.result()
         val serverConfig = parameters.getJsonObject("server")
-
         println("Server config: ${serverConfig.encodePrettily()}")
 
-        if (serverConfig.getString("path_key_pem").isNotEmpty() && serverConfig.getString("path_cert_pem").isNotEmpty()) {
-          serverOptions.pemTrustOptions = PemTrustOptions().
-            addCertPath(serverConfig.getString("path_fullchain_pem"))
-
-          serverOptions.pemKeyCertOptions = PemKeyCertOptions()
-            .setKeyPath(serverConfig.getString("path_key_pem"))
-            .setCertPath(serverConfig.getString("path_cert_pem"))
-        } else {
-          val selfSigned = SelfSignedCertificate.create(serverConfig.getString("server_host"))
-          serverOptions.keyCertOptions = selfSigned.keyCertOptions()
-          serverOptions.trustOptions = selfSigned.trustOptions()
-        }
-        serverOptions.isSsl = true
-
         val study = parameters.getJsonObject("study")
-
         println("Study info: ${study.encodePrettily()}")
 
         val sensors = JsonArray()
         val plugins = JsonArray()
 
+        /**
+         * This route simply returns the QRCode to join the study from the client
+         */
         router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
           if (route.request().getParam("studyNumber").toInt() == study.getInteger("study_number", 1)) {
             vertx.fileSystem()
               .open(
                 "src/main/resources/cache/qrcode.png",
-                OpenOptions().setCreate(true).setWrite(true).setTruncateExisting(true)
+                OpenOptions().setCreate(true).setWrite(true)
               ) { write ->
                 if (write.succeeded()) {
                   val asyncQrcode = write.result()
@@ -101,15 +92,20 @@ class MainVerticle : AbstractVerticle() {
                   val client = WebClient.create(vertx, webClientOptions)
                   client.get(
                     443, "chart.googleapis.com",
-                    "/chart?chs=300x300&cht=qr&chl=${serverConfig.getString("server_host")}:${serverConfig.getInteger(
-                      "server_port"
-                    )}/${study.getInteger("study_number")}/${study.getString("study_key")}&choe=UTF-8"
+                    "/chart?chs=300x300&cht=qr&chl=" +
+                      "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger("study_number")}/${study.getString("study_key")}" +
+                      "&choe=UTF-8"
                   )
                     .`as`(BodyCodec.pipe(asyncQrcode, true))
                     .send { request ->
                       if (request.succeeded()) {
                         pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
                           if (pebble.succeeded()) {
+
+                            println(
+                              "URL in QRCode is: ${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger("study_number")}/${study.getString("study_key")}"
+                            )
+
                             route.response().statusCode = 200
                             route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
                           }
@@ -123,7 +119,11 @@ class MainVerticle : AbstractVerticle() {
           }
         }
 
-        router.route(HttpMethod.POST, "/:studyNumber/:studyKey").handler { route ->
+        /**
+         * This route is called when joining the study, returns the JSON with all the settings from the study.
+         * Can be called from apps using Aware.joinStudy(URL) or client's QRCode scanner
+         */
+        router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey").handler { route ->
           if (route.request().getParam("studyKey") == study.getString("study_key")
             && route.request().getParam("studyNumber").toInt() == study.getInteger("study_number")
           ) {
@@ -140,12 +140,7 @@ class MainVerticle : AbstractVerticle() {
 
                 when (setting.getString("setting")) {
                   "status_webservice" -> awareSetting.put("value", "true")
-                  "webservice_server" -> awareSetting.put(
-                    "value",
-                    "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
-                      "study_number"
-                    )}/${study.getString("study_key")}"
-                  )
+                  "webservice_server" -> awareSetting.put("value", "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger("study_number")}/${study.getString("study_key")}")
                   else -> awareSetting.put("value", setting.getString("defaultValue"))
                 }
                 sensors.add(awareSetting)
@@ -193,10 +188,34 @@ class MainVerticle : AbstractVerticle() {
           }
         }
 
+        /**
+         * Legacy: this will be hit by legacy client to retrieve the study information. It retuns JsonObject with (defined also in aware-config.json on AWARE Micro):
+           {
+            "study_key" : "studyKey",
+            "study_number" : 1,
+            "study_name" : "AWARE Micro demo study",
+            "study_description" : "This is a demo study to test AWARE Micro",
+            "researcher_first" : "First Name",
+            "researcher_last" : "Last Name",
+            "researcher_contact" : "your@email.com"
+            }
+         */
+        router.route(HttpMethod.GET, "/index.php/webservice/client_get_study_info/:studyKey").handler { route ->
+          if (route.request().getParam("studyKey") == study.getString("study_key")) {
+            println("Providing study configuration...")
+            route.response().end(study.encode())
+          } else {
+            route.response().end("[]")
+          }
+        }
+
+        /**
+         * Default route, landing page of the server
+         */
         router.route(HttpMethod.GET, "/").handler { route ->
-          route.response().putHeader("content-type", "text/html").end("Hello from AWARE Micro - <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
-            "study_number"
-          )}/${study.getString("study_key")}\">QRCode</a>")
+          route.response().putHeader("content-type", "text/html").end(
+            "Hello from AWARE Micro - <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger("study_number")}/${study.getString("study_key")}\">QRCode</a>"
+          )
         }
 
         vertx.createHttpServer(serverOptions).requestHandler(router)
@@ -220,13 +239,16 @@ class MainVerticle : AbstractVerticle() {
 
         //infrastructure info
         val server = JsonObject()
-        server.put("database_engine", "mysql")
+        server.put(
+          "database_engine",
+          "mysql"
+        ) //we could support different database engines in the future (different verticals)
         server.put("database_host", "localhost")
         server.put("database_name", "studyDatabase")
         server.put("database_user", "databaseUser")
         server.put("database_pwd", "databasePassword")
         server.put("database_port", 3306)
-        server.put("server_host", "localhost")
+        server.put("server_host", "http://localhost")
         server.put("server_port", 8080)
         server.put("path_fullchain_pem", "")
         server.put("path_cert_pem", "")
@@ -312,7 +334,7 @@ class MainVerticle : AbstractVerticle() {
         if (child.attributes.getNamedItem("android:title") != null)
           sensor.put("title", child.attributes.getNamedItem("android:title").nodeValue)
         if (child.attributes.getNamedItem("android:icon") != null)
-          sensor.put("icon", child.attributes.getNamedItem("android:icon").nodeValue)
+          sensor.put("icon", getSensorIcon(child.attributes.getNamedItem("android:icon").nodeValue))
         if (child.attributes.getNamedItem("android:summary") != null)
           sensor.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
 
@@ -340,6 +362,39 @@ class MainVerticle : AbstractVerticle() {
       }
     }
     return sensors
+  }
+
+  /**
+   * This retrieves asynchronously the icons for each sensor from the client source code
+   */
+  private fun getSensorIcon(drawableId: String): String {
+    val icon = drawableId.substring(drawableId.indexOf('/') + 1)
+    val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-core/src/main/res/drawable/*.png"
+    vertx.fileSystem()
+      .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
+        if (writeFile.succeeded()) {
+          val asyncFile = writeFile.result()
+          val webClientOptions = WebClientOptions()
+            .setKeepAlive(true)
+            .setPipelining(true)
+            .setFollowRedirects(true)
+            .setSsl(true)
+            .setTrustAll(true)
+
+          val client = WebClient.create(vertx, webClientOptions)
+          client.get(443, "github.com", downloadUrl.replace("*", icon))
+            .`as`(BodyCodec.pipe(asyncFile, true))
+            .send { request ->
+              if (request.succeeded()) {
+                val iconFile = request.result()
+                println("Cached $icon.png: ${iconFile.statusCode() == 200}")
+              }
+            }
+        } else {
+          println("Unable to create file: ${writeFile.cause()}")
+        }
+      }
+    return "$icon.png"
   }
 
   /**
