@@ -177,6 +177,7 @@ class MainVerticle : AbstractVerticle() {
                 eventBus.publish("insertData",
                   JsonObject()
                     .put("table", route.request().getParam("table"))
+                    .put("device_id", route.request().getFormAttribute("device_id"))
                     .put("data", route.request().getFormAttribute("data")))
                 route.response().end()
               }
@@ -207,6 +208,9 @@ class MainVerticle : AbstractVerticle() {
               println("AWARE Micro failed: ${server.cause()}")
             }
           }
+
+        if (serverConfig.getString("database_engine") == "mysql") vertx.deployVerticle("com.awareframework.micro.MySQLVerticle")
+        if (serverConfig.getString("database_engine") == "postgres") vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
 
       } else { //this is a fresh instance, no server created yet.
 
@@ -496,10 +500,5 @@ class MainVerticle : AbstractVerticle() {
   private fun getSchedulers(): JsonArray {
     val schedulers = JsonArray()
     return schedulers
-  }
-
-  override fun init(vertx: Vertx?, context: Context?) {
-    super.init(vertx, context)
-    vertx?.deployVerticle("com.awareframework.micro.MySQLVerticle")
   }
 }
