@@ -1,5 +1,7 @@
 package com.awareframework.micro
 
+import com.mitchellbosecke.pebble.PebbleEngine
+import io.netty.handler.codec.http.HttpStatusClass
 import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
@@ -37,12 +39,13 @@ class MainVerticle : AbstractVerticle() {
 
     val serverOptions = HttpServerOptions()
     val pebbleEngine = PebbleTemplateEngine.create(vertx)
+    val eventBus = vertx.eventBus()
 
     val router = Router.router(vertx)
     router.route().handler(BodyHandler.create())
     router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
-      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()} ${it.request().params().toList()}")
+      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}} with the following data ${it.request().params().toList()}")
       it.next()
     }
 
@@ -74,49 +77,71 @@ class MainVerticle : AbstractVerticle() {
         router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
           if (route.request().getParam("studyNumber").toInt() == study.getInteger("study_number", 1)) {
 
-            println("Generating QRCode")
+            println("Checking QRCode")
 
-            vertx.fileSystem()
-              .open(
-                "src/main/resources/cache/qrcode.png",
-                OpenOptions().setCreate(true).setWrite(true)
-              ) { write ->
-                if (write.succeeded()) {
-                  val asyncQrcode = write.result()
+            vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
+              if (result.failed()) {
+                vertx.fileSystem()
+                  .open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
+                    if (write.succeeded()) {
+                      val asyncQrcode = write.result()
 
-                  val webClientOptions = WebClientOptions()
-                    .setKeepAlive(true)
-                    .setPipelining(true)
-                    .setFollowRedirects(true)
-                    .setSsl(true)
-                    .setTrustAll(true)
+                      val webClientOptions = WebClientOptions()
+                        .setKeepAlive(true)
+                        .setPipelining(true)
+                        .setFollowRedirects(true)
+                        .setSsl(true)
+                        .setTrustAll(true)
 
-                  val client = WebClient.create(vertx, webClientOptions)
-                  val serverURL = "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger("study_number")}/${study.getString("study_key")}"
-                  client.get(
-                    443, "chart.googleapis.com",
-                    "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
-                  )
-                    .`as`(BodyCodec.pipe(asyncQrcode, true))
-                    .send { request ->
-                      if (request.succeeded()) {
-                        pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
-                          if (pebble.succeeded()) {
+                      val client = WebClient.create(vertx, webClientOptions)
+                      val serverURL =
+                        "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                          "study_number"
+                        )}/${study.getString("study_key")}"
+                      client.get(
+                        443, "chart.googleapis.com",
+                        "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
+                      )
+                        .`as`(BodyCodec.pipe(asyncQrcode, true))
+                        .send { request ->
+                          if (request.succeeded()) {
+                            pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
+                              if (pebble.succeeded()) {
 
-                            println(
-                              "URL in QRCode is: $serverURL"
-                            )
+                                println(
+                                  "URL in QRCode is: $serverURL"
+                                )
 
-                            route.response().statusCode = 200
-                            route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                                route.response().statusCode = 200
+                                route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                              }
+                            }
+                          } else {
+                            println("QRCode failed: ${request.cause().message}")
                           }
                         }
-                      } else {
-                        println("QRCode failed: ${request.cause().message}")
-                      }
                     }
+                  }
+              } else {
+
+                pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
+                  if (pebble.succeeded()) {
+
+                    val serverURL =
+                      "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                        "study_number"
+                      )}/${study.getString("study_key")}"
+
+                    println(
+                      "URL in QRCode is: $serverURL"
+                    )
+
+                    route.response().statusCode = 200
+                    route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                  }
                 }
               }
+            }
           }
         }
 
@@ -130,9 +155,8 @@ class MainVerticle : AbstractVerticle() {
             println("Study status check")
             val status = JsonObject()
             status.put("status", "true")
-            status.put("config", getStudyConfig().getJsonObject(0))
+            status.put("config", "[]")
             route.response().end(JsonArray().add(status).encode())
-
             route.next()
           }
 
@@ -146,15 +170,15 @@ class MainVerticle : AbstractVerticle() {
 
         /**
          * Legacy: this will be hit by legacy client to retrieve the study information. It retuns JsonObject with (defined also in aware-config.json on AWARE Micro):
-           {
-            "study_key" : "studyKey",
-            "study_number" : 1,
-            "study_name" : "AWARE Micro demo study",
-            "study_description" : "This is a demo study to test AWARE Micro",
-            "researcher_first" : "First Name",
-            "researcher_last" : "Last Name",
-            "researcher_contact" : "your@email.com"
-            }
+        {
+        "study_key" : "studyKey",
+        "study_number" : 1,
+        "study_name" : "AWARE Micro demo study",
+        "study_description" : "This is a demo study to test AWARE Micro",
+        "researcher_first" : "First Name",
+        "researcher_last" : "Last Name",
+        "researcher_contact" : "your@email.com"
+        }
          */
         router.route(HttpMethod.GET, "/index.php/webservice/client_get_study_info/:studyKey").handler { route ->
           if (route.request().getParam("studyKey") == study.getString("study_key")) {
@@ -163,26 +187,29 @@ class MainVerticle : AbstractVerticle() {
         }
 
         router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey/:table/:operation").handler { route ->
-          if(route.request().getParam("studyKey") == study.getString("study_key")
-            && route.request().getParam("studyNumber").toInt() == study.getInteger("study_number")) {
+          if (route.request().getParam("studyKey") == study.getString("study_key")
+            && route.request().getParam("studyNumber").toInt() == study.getInteger("study_number")
+          ) {
 
-            when(route.request().getParam("operation")) {
+            when (route.request().getParam("operation")) {
               "create_table" -> {
-                val eventBus = vertx.eventBus()
                 eventBus.publish("createTable", route.request().getParam("table"))
+                route.response().statusCode = 200
                 route.response().end()
               }
               "insert" -> {
-                val eventBus = vertx.eventBus()
                 eventBus.publish("insertData",
                   JsonObject()
                     .put("table", route.request().getParam("table"))
                     .put("device_id", route.request().getFormAttribute("device_id"))
-                    .put("data", route.request().getFormAttribute("data")))
+                    .put("data", route.request().getFormAttribute("data"))
+                )
+                route.response().statusCode = 200
                 route.response().end()
               }
               else -> {
                 println("NOTHING TO DO")
+                route.response().statusCode = 200
                 route.response().end()
               }
             }
@@ -194,7 +221,9 @@ class MainVerticle : AbstractVerticle() {
          */
         router.route(HttpMethod.GET, "/").handler { route ->
           route.response().putHeader("content-type", "text/html").end(
-            "Hello from AWARE Micro - <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger("study_number")}/${study.getString("study_key")}\">QRCode</a>"
+            "Hello from AWARE Micro - <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
+              "study_number"
+            )}/${study.getString("study_key")}\">QRCode</a>"
           )
         }
 
@@ -291,7 +320,7 @@ class MainVerticle : AbstractVerticle() {
     }
   }
 
-  fun getStudyConfig() : JsonArray {
+  fun getStudyConfig(): JsonArray {
     val serverConfig = parameters.getJsonObject("server")
     //println("Server config: ${serverConfig.encodePrettily()}")
 
@@ -313,7 +342,12 @@ class MainVerticle : AbstractVerticle() {
 
         when (setting.getString("setting")) {
           "status_webservice" -> awareSetting.put("value", "true")
-          "webservice_server" -> awareSetting.put("value", "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger("study_number")}/${study.getString("study_key")}")
+          "webservice_server" -> awareSetting.put(
+            "value",
+            "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+              "study_number"
+            )}/${study.getString("study_key")}"
+          )
           else -> awareSetting.put("value", setting.getString("defaultValue"))
         }
         sensors.add(awareSetting)
@@ -414,6 +448,13 @@ class MainVerticle : AbstractVerticle() {
   private fun getSensorIcon(drawableId: String): String {
     val icon = drawableId.substring(drawableId.indexOf('/') + 1)
     val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-core/src/main/res/drawable/*.png"
+
+    vertx.fileSystem().mkdir("src/main/resources/cache") { result ->
+      if (result.succeeded()) {
+        println("Created cache folder")
+      }
+    }
+
     vertx.fileSystem()
       .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
         if (writeFile.succeeded()) {

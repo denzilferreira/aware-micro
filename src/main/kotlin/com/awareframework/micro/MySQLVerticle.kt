@@ -4,11 +4,14 @@ import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
+import io.vertx.core.Future
 import io.vertx.core.Promise
-import io.vertx.core.json.JsonArray
+import io.vertx.core.impl.StringEscapeUtils
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.asyncsql.MySQLClient
 import io.vertx.ext.sql.SQLClient
+import io.vertx.ext.sql.SQLConnection
+import io.vertx.kotlin.ext.sql.getConnectionAwait
 
 class MySQLVerticle : AbstractVerticle() {
 
@@ -17,7 +20,6 @@ class MySQLVerticle : AbstractVerticle() {
 
   override fun start(startPromise: Promise<Void>?) {
     super.start(startPromise)
-    println("AWARE Micro: MySQL connector initiated...")
 
     val configStore = ConfigStoreOptions()
       .setType("file")
@@ -27,6 +29,8 @@ class MySQLVerticle : AbstractVerticle() {
     val configRetrieverOptions = ConfigRetrieverOptions()
       .addStore(configStore)
       .setScanPeriod(5000)
+
+    val eventBus = vertx.eventBus()
 
     val configReader = ConfigRetriever.create(vertx, configRetrieverOptions)
     configReader.getConfig { config ->
@@ -46,40 +50,51 @@ class MySQLVerticle : AbstractVerticle() {
 
         sqlClient = MySQLClient.createShared(vertx, mysqlConfig)
 
-        sqlClient.getConnection { result ->
-          if (result.succeeded()) {
-            val connection = result.result()
-            val eventBus = vertx.eventBus()
-
-            eventBus.consumer<String>("createTable") { receivedMessage ->
-              println("Received createTable: ${receivedMessage.body()}")
+        eventBus.consumer<String>("createTable") { receivedMessage ->
+          sqlClient.getConnection {
+            if (it.succeeded()) {
+              val connection = it.result()
               connection.query("CREATE TABLE IF NOT EXISTS `${receivedMessage.body()}` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL)") {
-                if (result.failed()) {
-                  println("Failed to create table ${receivedMessage.body()}: ${result.cause().message}")
+                if (it.failed()) {
+                  println("Failed to create table: ${it.cause().message}")
                 }
               }
+              connection.close()
+            } else {
+              println("Failed to establish connection: ${it.cause().message}")
             }
+          }
+        }
 
-            eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
-              println("Received insertTable: ${receivedMessage.body()}")
-              val postData = JsonObject(receivedMessage.body().toString())
-              val dataArray = JsonArray(postData.getString("data"))
-              for(i in 0..dataArray.size()) {
-                val data = dataArray.getJsonObject(i)
-                connection.query("INSERT INTO `${postData.getString("table")}`(`device_id`, `timestamp`, `data`) VALUES (`${postData.getString("device_id")}`, `${System.currentTimeMillis()}`, `${data.encode()}`)") {
-                  if (it.failed()) {
-                    println("Failed to insert $postData ${data.encode()}")
-                  }
+        eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
+          val postData = JsonObject(receivedMessage.body().encode())
+          val deviceId = postData.getString("device_id")
+          val dataArray = StringEscapeUtils.escapeJavaScript(postData.getString("data"))
+          val table = postData.getString("table")
+
+          sqlClient.getConnection {
+            if (it.succeeded()) {
+              val connection = it.result()
+              connection.query("INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ('$deviceId', '${System.currentTimeMillis()}', '$dataArray')") {
+                if (it.failed()) {
+                  println("Failed to insert data: ${it.cause().message}")
+                } else {
+                  println("Inserted to $table : $dataArray")
                 }
               }
+              connection.close()
+            } else {
+              println("Failed to establish connection: ${it.cause().message}")
             }
-
-            connection.close()
-          } else {
-            println("Failed to connect to MySQL server: ${result.cause().message}")
           }
         }
       }
     }
+  }
+
+  override fun stop(stopFuture: Future<Void>?) {
+    super.stop(stopFuture)
+    println("AWARE Micro: MySQL client shutdown")
+    sqlClient.close()
   }
 }
