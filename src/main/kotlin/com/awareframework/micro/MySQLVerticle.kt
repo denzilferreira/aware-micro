@@ -4,14 +4,13 @@ import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
-import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.impl.StringEscapeUtils
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.asyncsql.MySQLClient
 import io.vertx.ext.sql.SQLClient
-import io.vertx.ext.sql.SQLConnection
-import io.vertx.kotlin.ext.sql.getConnectionAwait
+import java.util.stream.Collectors
 
 class MySQLVerticle : AbstractVerticle() {
 
@@ -51,49 +50,65 @@ class MySQLVerticle : AbstractVerticle() {
         sqlClient = MySQLClient.createShared(vertx, mysqlConfig)
 
         eventBus.consumer<String>("createTable") { receivedMessage ->
-          sqlClient.getConnection {
-            if (it.succeeded()) {
-              val connection = it.result()
-              connection.query("CREATE TABLE IF NOT EXISTS `${receivedMessage.body()}` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL)") {
-                if (it.failed()) {
-                  println("Failed to create table: ${it.cause().message}")
-                }
-              }
-              connection.close()
-            } else {
-              println("Failed to establish connection: ${it.cause().message}")
-            }
-          }
+          createTable(receivedMessage.body())
         }
 
         eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
-          val postData = JsonObject(receivedMessage.body().encode())
-          val deviceId = postData.getString("device_id")
-          val dataArray = StringEscapeUtils.escapeJavaScript(postData.getString("data"))
-          val table = postData.getString("table")
-
-          sqlClient.getConnection {
-            if (it.succeeded()) {
-              val connection = it.result()
-              connection.query("INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ('$deviceId', '${System.currentTimeMillis()}', '$dataArray')") {
-                if (it.failed()) {
-                  println("Failed to insert data: ${it.cause().message}")
-                } else {
-                  println("Inserted to $table : $dataArray")
-                }
-              }
-              connection.close()
-            } else {
-              println("Failed to establish connection: ${it.cause().message}")
-            }
-          }
+          val postData = receivedMessage.body()
+          insertData(device_id = postData.getString("device_id"), table = postData.getString("table"), data = JsonArray(postData.getString("data")))
         }
       }
     }
   }
 
-  override fun stop(stopFuture: Future<Void>?) {
-    super.stop(stopFuture)
+  fun createTable(table : String) {
+    sqlClient.getConnection {
+      if (it.succeeded()) {
+        val connection = it.result()
+        connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL)") {
+          if (it.failed()) {
+            println("Failed to create table: ${it.cause().message}")
+            connection.close()
+          } else {
+            println("Table: $table [OK]")
+            connection.close()
+          }
+        }
+      } else {
+        println("Failed to establish connection: ${it.cause().message}")
+      }
+    }
+  }
+
+  fun insertData(device_id : String, table : String, data : JsonArray) {
+    sqlClient.getConnection {
+      if (it.succeeded()) {
+        val connection = it.result()
+        val rows = data.size()
+        val values = ArrayList<String>()
+        for (i in 0 until data.size()) {
+          val entry = data.getJsonObject(i)
+          values.add("('$device_id', '${entry.getDouble("timestamp")}', '${StringEscapeUtils.escapeJavaScript(entry.encode())}')")
+        }
+        val insertBatch = "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(Collectors.joining(","))}"
+        connection.query(insertBatch) {
+          if (it.failed()) {
+            println("Failed to process batch: ${it.cause().message}")
+            connection.close()
+          } else {
+            println("$device_id saved to $table: $rows records")
+            connection.close()
+          }
+        }
+
+      } else {
+        println("Failed to establish connection: ${it.cause().message}")
+      }
+    }
+  }
+
+  override fun stop() {
+    super.stop()
     println("AWARE Micro: MySQL client shutdown")
     sqlClient.close()
   }

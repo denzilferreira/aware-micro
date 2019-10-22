@@ -45,7 +45,8 @@ class MainVerticle : AbstractVerticle() {
     router.route().handler(BodyHandler.create())
     router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
-      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}} with the following data ${it.request().params().toList()}")
+      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}}")
+        //"with the following data ${it.request().params().toList()}")
       it.next()
     }
 
@@ -62,30 +63,21 @@ class MainVerticle : AbstractVerticle() {
     configReader.getConfig { config ->
 
       if (config.succeeded() && config.result().containsKey("server")) {
-
         parameters = config.result()
-
         val serverConfig = parameters.getJsonObject("server")
-        //println("Server config: ${serverConfig.encodePrettily()}")
-
         val study = parameters.getJsonObject("study")
-        //println("Study info: ${study.encodePrettily()}")
 
         /**
          * Generate QRCode to join the study using Google's Chart API
          */
         router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
-          if (route.request().getParam("studyNumber").toInt() == study.getInteger("study_number", 1)) {
-
-            println("Checking QRCode")
-
+          if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
             vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
+              //no QRCode yet
               if (result.failed()) {
-                vertx.fileSystem()
-                  .open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
+                vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
                     if (write.succeeded()) {
                       val asyncQrcode = write.result()
-
                       val webClientOptions = WebClientOptions()
                         .setKeepAlive(true)
                         .setPipelining(true)
@@ -98,6 +90,9 @@ class MainVerticle : AbstractVerticle() {
                         "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
                           "study_number"
                         )}/${study.getString("study_key")}"
+
+                      println("URL encoded for the QRCode is: $serverURL")
+
                       client.get(
                         443, "chart.googleapis.com",
                         "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
@@ -107,35 +102,26 @@ class MainVerticle : AbstractVerticle() {
                           if (request.succeeded()) {
                             pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
                               if (pebble.succeeded()) {
-
-                                println(
-                                  "URL in QRCode is: $serverURL"
-                                )
-
                                 route.response().statusCode = 200
                                 route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
                               }
                             }
                           } else {
-                            println("QRCode failed: ${request.cause().message}")
+                            println("QRCode creation failed: ${request.cause().message}")
                           }
                         }
                     }
                   }
               } else {
+                //render cached QRCode
 
-                pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
+                val serverURL =
+                  "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                    "study_number"
+                  )}/${study.getString("study_key")}"
+
+                pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
                   if (pebble.succeeded()) {
-
-                    val serverURL =
-                      "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
-                        "study_number"
-                      )}/${study.getString("study_key")}"
-
-                    println(
-                      "URL in QRCode is: $serverURL"
-                    )
-
                     route.response().statusCode = 200
                     route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
                   }
@@ -148,23 +134,20 @@ class MainVerticle : AbstractVerticle() {
         /**
          * This route is called:
          * - when joining the study, returns the JSON with all the settings from the study. Can be called from apps using Aware.joinStudy(URL) or client's QRCode scanner
-         * - when checking study status with the study_check=1
+         * - when checking study status with the study_check=1.
          */
         router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey").handler { route ->
-          if (route.request().getFormAttribute("study_check") == "1") {
-            println("Study status check")
-            val status = JsonObject()
-            status.put("status", "true")
-            status.put("config", "[]")
-            route.response().end(JsonArray().add(status).encode())
-            route.next()
-          }
-
-          if (route.request().getParam("studyKey") == study.getString("study_key")
-            && route.request().getParam("studyNumber").toInt() == study.getInteger("study_number")
-          ) {
-            println("Returning the study configuration")
-            route.response().end(getStudyConfig().encode())
+          if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
+            if (route.request().getFormAttribute("study_check") == "1") {
+              val status = JsonObject()
+              status.put("status", study.getBoolean("study_active"))
+              status.put("config", "[]") //NOTE: if we send the configuration, it will keep reapplying the settings on legacy clients. Sending empty JsonArray (i.e., no changes)
+              route.response().end(JsonArray().add(status).encode())
+              route.next()
+            } else {
+              println("Study configuration: ${getStudyConfig().encodePrettily()}")
+              route.response().end(getStudyConfig().encode())
+            }
           }
         }
 
@@ -187,10 +170,7 @@ class MainVerticle : AbstractVerticle() {
         }
 
         router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey/:table/:operation").handler { route ->
-          if (route.request().getParam("studyKey") == study.getString("study_key")
-            && route.request().getParam("studyNumber").toInt() == study.getInteger("study_number")
-          ) {
-
+          if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
             when (route.request().getParam("operation")) {
               "create_table" -> {
                 eventBus.publish("createTable", route.request().getParam("table"))
@@ -208,7 +188,7 @@ class MainVerticle : AbstractVerticle() {
                 route.response().end()
               }
               else -> {
-                println("NOTHING TO DO")
+                //no-op
                 route.response().statusCode = 200
                 route.response().end()
               }
@@ -221,25 +201,33 @@ class MainVerticle : AbstractVerticle() {
          */
         router.route(HttpMethod.GET, "/").handler { route ->
           route.response().putHeader("content-type", "text/html").end(
-            "Hello from AWARE Micro - <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
+            "Hello from AWARE Micro!<br/>Join study: <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
               "study_number"
-            )}/${study.getString("study_key")}\">QRCode</a>"
+            )}/${study.getString("study_key")}\">HERE</a>"
           )
         }
 
         vertx.createHttpServer(serverOptions).requestHandler(router)
           .listen(serverConfig.getInteger("server_port")) { server ->
             if (server.succeeded()) {
+              when (serverConfig.getString("database_engine")) {
+                "mysql" -> {
+                  vertx.deployVerticle("com.awareframework.micro.MySQLVerticle")
+                }
+                "postgres" -> {
+                  vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
+                }
+                else -> {
+                  println("Not storing data into a database engine: mysql, postgres")
+                }
+              }
               startPromise.complete()
               println("AWARE Micro is available at ${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}")
             } else {
               startPromise.fail(server.cause());
-              println("AWARE Micro failed: ${server.cause()}")
+              println("AWARE Micro initialisation failed! Because: ${server.cause()}")
             }
           }
-
-        if (serverConfig.getString("database_engine") == "mysql") vertx.deployVerticle("com.awareframework.micro.MySQLVerticle")
-        if (serverConfig.getString("database_engine") == "postgres") vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
 
       } else { //this is a fresh instance, no server created yet.
 
@@ -247,10 +235,7 @@ class MainVerticle : AbstractVerticle() {
 
         //infrastructure info
         val server = JsonObject()
-        server.put(
-          "database_engine",
-          "mysql"
-        ) //we could support different database engines in the future (different verticals)
+        server.put("database_engine", "mysql") //[mysql, postgres]
         server.put("database_host", "localhost")
         server.put("database_name", "studyDatabase")
         server.put("database_user", "databaseUser")
@@ -268,6 +253,8 @@ class MainVerticle : AbstractVerticle() {
         study.put("study_key", "studyKey")
         study.put("study_number", 1)
         study.put("study_name", "AWARE Micro demo study")
+        study.put("study_active", true)
+        study.put("study_start", System.currentTimeMillis())
         study.put("study_description", "This is a demo study to test AWARE Micro")
         study.put("researcher_first", "First Name")
         study.put("researcher_last", "Last Name")
@@ -320,6 +307,13 @@ class MainVerticle : AbstractVerticle() {
     }
   }
 
+  /**
+   * Check valid study key and number
+   */
+  fun validRoute(studyInfo: JsonObject, studyNumber: Int, studyKey: String) : Boolean {
+    return studyNumber == studyInfo.getInteger("study_number") && studyKey == studyInfo.getString("study_key")
+  }
+
   fun getStudyConfig(): JsonArray {
     val serverConfig = parameters.getJsonObject("server")
     //println("Server config: ${serverConfig.encodePrettily()}")
@@ -361,7 +355,7 @@ class MainVerticle : AbstractVerticle() {
 
     awareSetting = JsonObject()
     awareSetting.put("setting", "study_start")
-    awareSetting.put("value", System.currentTimeMillis())
+    awareSetting.put("value", study.getDouble("study_start"))
     sensors.add(awareSetting)
 
     val awarePlugins = parameters.getJsonArray("plugins")
