@@ -36,7 +36,6 @@ class MySQLVerticle : AbstractVerticle() {
       if (config.succeeded() && config.result().containsKey("server")) {
         parameters = config.result()
         val serverConfig = parameters.getJsonObject("server")
-        println("Server config from MySQL ${serverConfig.encodePrettily()}")
 
         val mysqlConfig = JsonObject()
           .put("host", serverConfig.getString("database_host"))
@@ -55,13 +54,17 @@ class MySQLVerticle : AbstractVerticle() {
 
         eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
           val postData = receivedMessage.body()
-          insertData(device_id = postData.getString("device_id"), table = postData.getString("table"), data = JsonArray(postData.getString("data")))
+          insertData(
+            device_id = postData.getString("device_id"),
+            table = postData.getString("table"),
+            data = JsonArray(postData.getString("data"))
+          )
         }
       }
     }
   }
 
-  fun createTable(table : String) {
+  fun createTable(table: String) {
     sqlClient.getConnection {
       if (it.succeeded()) {
         val connection = it.result()
@@ -80,7 +83,7 @@ class MySQLVerticle : AbstractVerticle() {
     }
   }
 
-  fun insertData(device_id : String, table : String, data : JsonArray) {
+  fun insertData(device_id: String, table: String, data: JsonArray) {
     sqlClient.getConnection {
       if (it.succeeded()) {
         val connection = it.result()
@@ -90,7 +93,10 @@ class MySQLVerticle : AbstractVerticle() {
           val entry = data.getJsonObject(i)
           values.add("('$device_id', '${entry.getDouble("timestamp")}', '${StringEscapeUtils.escapeJavaScript(entry.encode())}')")
         }
-        val insertBatch = "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(Collectors.joining(","))}"
+        val insertBatch =
+          "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(
+            Collectors.joining(",")
+          )}"
         connection.query(insertBatch) {
           if (it.failed()) {
             println("Failed to process batch: ${it.cause().message}")

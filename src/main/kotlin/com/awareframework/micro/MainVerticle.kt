@@ -35,7 +35,7 @@ class MainVerticle : AbstractVerticle() {
 
   override fun start(startPromise: Promise<Void>) {
 
-    println("AWARE Micro: initializing...")
+    println("AWARE Micro initializing...")
 
     val serverOptions = HttpServerOptions()
     val pebbleEngine = PebbleTemplateEngine.create(vertx)
@@ -207,7 +207,8 @@ class MainVerticle : AbstractVerticle() {
           )
         }
 
-        vertx.createHttpServer(serverOptions).requestHandler(router)
+        vertx.createHttpServer(serverOptions)
+          .requestHandler(router)
           .listen(serverConfig.getInteger("server_port")) { server ->
             if (server.succeeded()) {
               when (serverConfig.getString("database_engine")) {
@@ -221,11 +222,14 @@ class MainVerticle : AbstractVerticle() {
                   println("Not storing data into a database engine: mysql, postgres")
                 }
               }
+
+              vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
+
+              println("AWARE Micro API at ${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}")
               startPromise.complete()
-              println("AWARE Micro is available at ${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}")
             } else {
-              startPromise.fail(server.cause());
               println("AWARE Micro initialisation failed! Because: ${server.cause()}")
+              startPromise.fail(server.cause());
             }
           }
 
@@ -243,6 +247,7 @@ class MainVerticle : AbstractVerticle() {
         server.put("database_port", 3306)
         server.put("server_host", "http://localhost")
         server.put("server_port", 8080)
+        server.put("websocket_port", 8081)
         server.put("path_fullchain_pem", "")
         server.put("path_cert_pem", "")
         server.put("path_key_pem", "")
