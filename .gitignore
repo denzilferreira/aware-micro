@@ -195,4 +195,6 @@ aware-config.json
 #don't want no certs on source control
 cert.pem
 privkey.pem
+fullchain.pem
 
+/.env

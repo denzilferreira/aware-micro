@@ -1,19 +1,24 @@
 {
   "server" : {
     "database_engine" : "%DB_ENGINE%",
+    "database_host": "%DB_HOST%",
     "database_name" : "%DB_NAME%",
     "database_user" : "%DB_USER%",
     "database_pwd" : "%DB_PWD%",
-    "cert_pem" : "/aware-micro/cert.pem",
-    "key_pem" : "/aware-micro/privkey.pem",
-    "database_port" : %DB_PORT%,
-    "server_domain" : "%SERVER_DOMAIN%",
-    "api_port" : %API_PORT%
+    "database_port": %DB_PORT%,
+    "server_host": "%SERVER_HOST%",
+    "server_port": %SERVER_PORT%,
+    "websocket_port": %WEBSOCKET_PORT%,
+    "path_cert_pem" : "",
+    "path_key_pem" : "",
+    "path_fullchain_pem": ""
   },
   "study" : {
     "study_key" : "studyKey",
     "study_number" : 1,
     "study_name" : "AWARE Micro demo study",
+    "study_active" : true,
+    "study_start" : %STUDY_START%,
     "study_description" : "This is a demo study to test AWARE Micro",
     "researcher_first" : "First Name",
     "researcher_last" : "Last Name",
@@ -22,7 +27,7 @@
   "sensors" : [ {
     "sensor" : "accelerometer",
     "title" : "Accelerometer",
-    "icon" : "@drawable/ic_action_accelerometer",
+    "icon" : "ic_action_accelerometer.png",
     "summary" : "Acceleration, including the force of gravity (m/s^2)",
     "settings" : [ {
       "setting" : "status_accelerometer",
@@ -46,7 +51,7 @@
   }, {
     "sensor" : "applications",
     "title" : "Applications",
-    "icon" : "@drawable/ic_action_applications",
+    "icon" : "ic_action_applications.png",
     "summary" : "Application usage",
     "settings" : [ {
       "setting" : "status_applications",
@@ -87,7 +92,7 @@
   }, {
     "sensor" : "barometer",
     "title" : "Barometer",
-    "icon" : "@drawable/ic_action_barometer",
+    "icon" : "ic_action_barometer.png",
     "summary" : "Atmospheric air pressure (mbar/hPa)",
     "settings" : [ {
       "setting" : "status_barometer",
@@ -111,7 +116,7 @@
   }, {
     "sensor" : "battery",
     "title" : "Battery",
-    "icon" : "@drawable/ic_action_battery",
+    "icon" : "ic_action_battery.png",
     "summary" : "Battery and power events",
     "settings" : [ {
       "setting" : "status_battery",
@@ -121,7 +126,7 @@
   }, {
     "sensor" : "bluetooth",
     "title" : "Bluetooth",
-    "icon" : "@drawable/ic_action_bluetooth",
+    "icon" : "ic_action_bluetooth.png",
     "summary" : "Bluetooth sensing",
     "settings" : [ {
       "setting" : "status_bluetooth",
@@ -136,7 +141,7 @@
   }, {
     "sensor" : "communication",
     "title" : "Communication",
-    "icon" : "@drawable/ic_action_communication",
+    "icon" : "ic_action_communication.png",
     "summary" : "Communication usage (calls/messages)",
     "settings" : [ {
       "setting" : "status_calls",
@@ -152,7 +157,7 @@
   }, {
     "sensor" : "esm",
     "title" : "Mobile ESM/EMA",
-    "icon" : "@drawable/ic_action_esm",
+    "icon" : "ic_action_esm.png",
     "summary" : "Mobile questionnaires",
     "settings" : [ {
       "setting" : "status_esm",
@@ -163,7 +168,7 @@
   }, {
     "sensor" : "gravity",
     "title" : "Gravity",
-    "icon" : "@drawable/ic_action_gravity",
+    "icon" : "ic_action_gravity.png",
     "summary" : "Force of gravity as a 3D vector with direction and magnitude of gravity (m/s^2)",
     "settings" : [ {
       "setting" : "status_gravity",
@@ -187,7 +192,7 @@
   }, {
     "sensor" : "gyroscope",
     "title" : "Gyroscope",
-    "icon" : "@drawable/ic_action_gyroscope",
+    "icon" : "ic_action_gyroscope.png",
     "summary" : "Rate of rotation of device (rad/s)",
     "settings" : [ {
       "setting" : "status_gyroscope",
@@ -211,7 +216,7 @@
   }, {
     "sensor" : "locations",
     "title" : "Locations",
-    "icon" : "@drawable/ic_action_locations",
+    "icon" : "ic_action_locations.png",
     "summary" : "User's estimated location by GPS and network triangulation",
     "settings" : [ {
       "setting" : "status_location_gps",
@@ -262,7 +267,7 @@
   }, {
     "sensor" : "light",
     "title" : "Light",
-    "icon" : "@drawable/ic_action_light",
+    "icon" : "ic_action_light.png",
     "summary" : "Ambient light (lux)",
     "settings" : [ {
       "setting" : "status_light",
@@ -286,7 +291,7 @@
   }, {
     "sensor" : "linear_accelerometer",
     "title" : "Linear accelerometer",
-    "icon" : "@drawable/ic_action_linear_accelerometer",
+    "icon" : "ic_action_linear_accelerometer.png",
     "summary" : "Acceleration, w/o gravity (m/s^2)",
     "settings" : [ {
       "setting" : "status_linear_accelerometer",
@@ -310,7 +315,7 @@
   }, {
     "sensor" : "network",
     "title" : "Network",
-    "icon" : "@drawable/ic_action_network",
+    "icon" : "ic_action_network.png",
     "summary" : "Network usage and traffic",
     "settings" : [ {
       "setting" : "status_network_events",
@@ -326,7 +331,7 @@
   }, {
     "sensor" : "magnetometer",
     "title" : "Magnetometer",
-    "icon" : "@drawable/ic_action_magnetometer",
+    "icon" : "ic_action_magnetometer.png",
     "summary" : "Geomagnetic field strength around the device (µT)",
     "settings" : [ {
       "setting" : "status_magnetometer",
@@ -350,7 +355,7 @@
   }, {
     "sensor" : "processor",
     "title" : "Processor workload",
-    "icon" : "@drawable/ic_action_processor",
+    "icon" : "ic_action_processor.png",
     "summary" : "CPU workload for user, system and idle (%)",
     "settings" : [ {
       "setting" : "status_processor",
@@ -365,7 +370,7 @@
   }, {
     "sensor" : "timezone",
     "title" : "Timezone",
-    "icon" : "@drawable/ic_action_timezone",
+    "icon" : "ic_action_timezone.png",
     "summary" : "Tracks user's current timezone",
     "settings" : [ {
       "setting" : "status_timezone",
@@ -375,7 +380,7 @@
   }, {
     "sensor" : "proximity",
     "title" : "Proximity",
-    "icon" : "@drawable/ic_action_proximity",
+    "icon" : "ic_action_proximity.png",
     "summary" : "Proximity sensor distance (HW-dependent value for far and near)",
     "settings" : [ {
       "setting" : "status_proximity",
@@ -399,7 +404,7 @@
   }, {
     "sensor" : "rotation",
     "title" : "Rotation",
-    "icon" : "@drawable/ic_action_rotation",
+    "icon" : "ic_action_rotation.png",
     "summary" : "Orientation of the device in all axis",
     "settings" : [ {
       "setting" : "status_rotation",
@@ -423,7 +428,7 @@
   }, {
     "sensor" : "screen",
     "title" : "Screen usage",
-    "icon" : "@drawable/ic_action_screen",
+    "icon" : "ic_action_screen.png",
     "summary" : "Screen events (on, off, locked, unlocked)",
     "settings" : [ {
       "setting" : "status_screen",
@@ -444,7 +449,7 @@
   }, {
     "sensor" : "significant_motion",
     "title" : "Significant motion",
-    "icon" : "@drawable/ic_action_significant_motion",
+    "icon" : "ic_action_significant_motion.png",
     "summary" : "Significant motion",
     "settings" : [ {
       "setting" : "status_significant_motion",
@@ -455,7 +460,7 @@
   }, {
     "sensor" : "temperature",
     "title" : "Temperature",
-    "icon" : "@drawable/ic_action_temperature",
+    "icon" : "ic_action_temperature.png",
     "summary" : "Ambient air temperature (Celsius)",
     "settings" : [ {
       "setting" : "status_temperature",
@@ -479,7 +484,7 @@
   }, {
     "sensor" : "telephony",
     "title" : "Telephony",
-    "icon" : "@drawable/ic_action_telephony",
+    "icon" : "ic_action_telephony.png",
     "summary" : "Cell operator, current cell tower and neighbor towers",
     "settings" : [ {
       "setting" : "status_telephony",
@@ -490,7 +495,7 @@
   }, {
     "sensor" : "wifi",
     "title" : "Wi-Fi",
-    "icon" : "@drawable/ic_action_wifi",
+    "icon" : "ic_action_wifi.png",
     "summary" : "Wi-Fi sensing",
     "settings" : [ {
       "setting" : "status_wifi",
@@ -505,7 +510,7 @@
   }, {
     "sensor" : "mqtt",
     "title" : "MQTT Server",
-    "icon" : "@drawable/ic_action_mqtt",
+    "icon" : "ic_action_mqtt.png",
     "summary" : "Allows remove questionnaires, P2P context exchange",
     "settings" : [ {
       "setting" : "status_mqtt",
@@ -530,7 +535,7 @@
   }, {
     "sensor" : "webservice",
     "title" : "AWARE Study",
-    "icon" : "@drawable/ic_action_webservice",
+    "icon" : "ic_action_webservice.png",
     "summary" : "Study and sync settings",
     "settings" : [ {
       "setting" : "status_webservice",

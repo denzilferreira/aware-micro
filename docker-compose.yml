@@ -4,17 +4,33 @@ services:
     build:
       context: .
       args:
-        DB_ENGINE: mysql
-        DB_NAME: studyDatabase
-        DB_USER: databaseUser
-        DB_PWD:  databasePassword
-        DB_PORT: 3306
-        SERVER_DOMAIN: localhost
-        API_PORT: 443
-    command: ["clean", "run"]
+        DB_ENGINE: "${DB_ENGINE}"
+        DB_HOST: "${DB_HOST}"
+        DB_NAME: "${DB_NAME}"
+        DB_USER: "${DB_USER}"
+        DB_PWD: "${DB_PWD}"
+        DB_PORT: "${DB_PORT}"
+        SERVER_HOST: "${SERVER_HOST}"
+        SERVER_PORT: "${SERVER_PORT}"
+        WEBSOCKET_PORT: "${WEBSOCKET_PORT}"
     container_name: aware-micro
+    depends_on:
+      - aware-micro-db
     image: aware-micro
     ports:
-      - "443:443"
+      - "${SERVER_HOST}:${SERVER_HOST}"
+      - "${WEBSOCKET_PORT}:${WEBSOCKET_PORT}"
     volumes:
       - "${PWD}:/aware-micro"
+  aware-micro-db:
+    container_name: aware-micro-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PWD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PWD}
+    image: mysql:5.7.28
+    ports:
+      - "3306:3306"
+    volumes:
+      - /var/lib/mysql
