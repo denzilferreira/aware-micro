@@ -65,7 +65,7 @@ class MySQLVerticle : AbstractVerticle() {
     sqlClient.getConnection {
       if (it.succeeded()) {
         val connection = it.result()
-        connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL)") {
+        connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") {
           if (it.failed()) {
             println("Failed to create table: ${it.cause().message}")
             connection.close()
