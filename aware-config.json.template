@@ -9,9 +9,9 @@
     "server_host": "%SERVER_HOST%",
     "server_port": %SERVER_PORT%,
     "websocket_port": %WEBSOCKET_PORT%,
-    "path_cert_pem" : "",
-    "path_key_pem" : "",
-    "path_fullchain_pem": ""
+    "path_cert_pem" : "/aware-micro/cert.pem",
+    "path_key_pem" : "/aware-micro/privkey.pem",
+    "path_fullchain_pem": "/aware-micro/fullchain.pem"
   },
   "study" : {
     "study_key" : "studyKey",

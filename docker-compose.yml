@@ -18,7 +18,7 @@ services:
       - aware-micro-db
     image: aware-micro
     ports:
-      - "${SERVER_HOST}:${SERVER_HOST}"
+      - "${SERVER_PORT}:${SERVER_PORT}"
       - "${WEBSOCKET_PORT}:${WEBSOCKET_PORT}"
     volumes:
       - "${PWD}:/aware-micro"
