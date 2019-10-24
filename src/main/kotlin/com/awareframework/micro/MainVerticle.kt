@@ -112,6 +112,8 @@ class MainVerticle : AbstractVerticle() {
                             println("QRCode creation failed: ${request.cause().message}")
                           }
                         }
+                    } else {
+                      println(write.cause().message)
                     }
                   }
               } else {
