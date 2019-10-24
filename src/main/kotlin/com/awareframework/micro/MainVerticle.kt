@@ -47,100 +47,110 @@ class MainVerticle : AbstractVerticle() {
     router.route().handler {
       println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}}")
         //"with the following data ${it.request().params().toList()}")
-      it.next()
-    }
+        it.next()
+      }
 
-    val configStore = ConfigStoreOptions()
+      val configStore = ConfigStoreOptions()
       .setType("file")
       .setFormat("json")
       .setConfig(JsonObject().put("path", "aware-config.json"))
 
-    val configRetrieverOptions = ConfigRetrieverOptions()
+      val configRetrieverOptions = ConfigRetrieverOptions()
       .addStore(configStore)
       .setScanPeriod(5000)
 
-    val configReader = ConfigRetriever.create(vertx, configRetrieverOptions)
-    configReader.getConfig { config ->
+      val configReader = ConfigRetriever.create(vertx, configRetrieverOptions)
+      configReader.getConfig { config ->
 
-      if (config.succeeded() && config.result().containsKey("server")) {
-        parameters = config.result()
-        val serverConfig = parameters.getJsonObject("server")
-        val study = parameters.getJsonObject("study")
+        if (config.succeeded() && config.result().containsKey("server")) {
+          parameters = config.result()
+          val serverConfig = parameters.getJsonObject("server")
+          val study = parameters.getJsonObject("study")
 
         /**
          * Generate QRCode to join the study using Google's Chart API
          */
-        router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
+         router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
           if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
             vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
 
               if (result.failed()) {
                 println("Starting the process to create the QRCode.")
-                vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
-                    if (write.succeeded()) {
-                      val asyncQrcode = write.result()
-                      val webClientOptions = WebClientOptions()
+                vertx.fileSystem().mkdir("src/main/resources/cache", {
+                  mkdir -> 
+                  if(mkdir.succeeded()) {
+                    vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
+
+                      if (write.succeeded()) {
+                        val asyncQrcode = write.result()
+                        val webClientOptions = WebClientOptions()
                         .setKeepAlive(true)
                         .setPipelining(true)
                         .setFollowRedirects(true)
                         .setSsl(true)
                         .setTrustAll(true)
 
-                      println("Saved QRCode")
-                      val client = WebClient.create(vertx, webClientOptions)
-                      val serverURL =
+                        println("Saved QRCode")
+                        val client = WebClient.create(vertx, webClientOptions)
+                        val serverURL =
                         "${serverConfig.getInteger("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
                           "study_number"
-                        )}/${study.getString("study_key")}"
+                          )}/${study.getString("study_key")}"
 
-                      println("URL encoded for the QRCode is: $serverURL")
+                          println("URL encoded for the QRCode is: $serverURL")
 
-                      client.get(
-                        443, "chart.googleapis.com",
-                        "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
-                      )
-                        .`as`(BodyCodec.pipe(asyncQrcode, true))
-                        .send { request ->
-                          if (request.succeeded()) {
-                            pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
-                              if (pebble.succeeded()) {
-                                route.response().statusCode = 200
-                                route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                          client.get(
+                            443, "chart.googleapis.com",
+                            "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
+                            )
+                          .`as`(BodyCodec.pipe(asyncQrcode, true))
+                          .send { request ->
+                            if (request.succeeded()) {
+                              pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
+                                if (pebble.succeeded()) {
+                                  route.response().statusCode = 200
+                                  route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                                }
+                              }
+                              } else {
+                                println("QRCode creation failed: ${request.cause().message}")
                               }
                             }
-                          } else {
-                            println("QRCode creation failed: ${request.cause().message}")
+                            } else {
+                              println("QRCode creation failed: ${write.cause().message}")
+                            }
                           }
+                        } else {
+                          println("QRCode creation failed: ${mkdir.cause().message}")
                         }
-                    } else {
-                      println(write.cause().message)
-                    }
-                  }
+                      }
+                    )
+              }
               } else {
                 //render cached QRCode
                 println("Rendering QRCode from cache.")
                 val serverURL =
-                  "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
-                    "study_number"
+                "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                  "study_number"
                   )}/${study.getString("study_key")}"
 
-                pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
-                  if (pebble.succeeded()) {
-                    route.response().statusCode = 200
-                    route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                  pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
+                    if (pebble.succeeded()) {
+                      route.response().statusCode = 200
+                      route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
+                    }
                   }
                 }
               }
             }
           }
-        }
 
         /**
          * This route is called:
          * - when joining the study, returns the JSON with all the settings from the study. Can be called from apps using Aware.joinStudy(URL) or client's QRCode scanner
          * - when checking study status with the study_check=1.
          */
-        router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey").handler { route ->
+         router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey").handler { route ->
           if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
             if (route.request().getFormAttribute("study_check") == "1") {
               val status = JsonObject()
@@ -148,12 +158,12 @@ class MainVerticle : AbstractVerticle() {
               status.put("config", "[]") //NOTE: if we send the configuration, it will keep reapplying the settings on legacy clients. Sending empty JsonArray (i.e., no changes)
               route.response().end(JsonArray().add(status).encode())
               route.next()
-            } else {
-              println("Study configuration: ${getStudyConfig().encodePrettily()}")
-              route.response().end(getStudyConfig().encode())
+              } else {
+                println("Study configuration: ${getStudyConfig().encodePrettily()}")
+                route.response().end(getStudyConfig().encode())
+              }
             }
           }
-        }
 
         /**
          * Legacy: this will be hit by legacy client to retrieve the study information. It retuns JsonObject with (defined also in aware-config.json on AWARE Micro):
@@ -166,7 +176,7 @@ class MainVerticle : AbstractVerticle() {
         "researcher_last" : "Last Name",
         "researcher_contact" : "your@email.com"
         }
-         */
+        */
         router.route(HttpMethod.GET, "/index.php/webservice/client_get_study_info/:studyKey").handler { route ->
           if (route.request().getParam("studyKey") == study.getString("study_key")) {
             route.response().end(study.encode())
@@ -184,10 +194,10 @@ class MainVerticle : AbstractVerticle() {
               "insert" -> {
                 eventBus.publish("insertData",
                   JsonObject()
-                    .put("table", route.request().getParam("table"))
-                    .put("device_id", route.request().getFormAttribute("device_id"))
-                    .put("data", route.request().getFormAttribute("data"))
-                )
+                  .put("table", route.request().getParam("table"))
+                  .put("device_id", route.request().getFormAttribute("device_id"))
+                  .put("data", route.request().getFormAttribute("data"))
+                  )
                 route.response().statusCode = 200
                 route.response().end()
               }
@@ -203,34 +213,34 @@ class MainVerticle : AbstractVerticle() {
         /**
          * Default route, landing page of the server
          */
-        router.route(HttpMethod.GET, "/").handler { route ->
+         router.route(HttpMethod.GET, "/").handler { route ->
           route.response().putHeader("content-type", "text/html").end(
             "Hello from AWARE Micro!<br/>Join study: <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
               "study_number"
-            )}/${study.getString("study_key")}\">HERE</a>"
-          )
+              )}/${study.getString("study_key")}\">HERE</a>"
+              )
         }
 
         vertx.createHttpServer(serverOptions)
-          .requestHandler(router)
-          .listen(serverConfig.getInteger("server_port")) { server ->
-            if (server.succeeded()) {
-              when (serverConfig.getString("database_engine")) {
-                "mysql" -> {
-                  vertx.deployVerticle("com.awareframework.micro.MySQLVerticle")
-                }
-                "postgres" -> {
-                  vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
-                }
-                else -> {
-                  println("Not storing data into a database engine: mysql, postgres")
-                }
+        .requestHandler(router)
+        .listen(serverConfig.getInteger("server_port")) { server ->
+          if (server.succeeded()) {
+            when (serverConfig.getString("database_engine")) {
+              "mysql" -> {
+                vertx.deployVerticle("com.awareframework.micro.MySQLVerticle")
               }
+              "postgres" -> {
+                vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
+              }
+              else -> {
+                println("Not storing data into a database engine: mysql, postgres")
+              }
+            }
 
-              vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
+            vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
 
-              println("AWARE Micro API at ${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}")
-              startPromise.complete()
+            println("AWARE Micro API at ${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}")
+            startPromise.complete()
             } else {
               println("AWARE Micro initialisation failed! Because: ${server.cause()}")
               startPromise.fail(server.cause());
@@ -272,35 +282,35 @@ class MainVerticle : AbstractVerticle() {
 
         //AWARE framework settings from both sensors and plugins
         val sensors =
-          getSensors("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml")
+        getSensors("https://raw.githubusercontent.com/denzilferreira/aware-client/master/aware-core/src/main/res/xml/aware_preferences.xml")
 
         configFile.put("sensors", sensors)
 
         val pluginsList = HashMap<String, String>()
         pluginsList["com.aware.plugin.ambient_noise"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.ambient_noise/master/com.aware.plugin.ambient_noise/src/main/res/xml/preferences_ambient_noise.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.ambient_noise/master/com.aware.plugin.ambient_noise/src/main/res/xml/preferences_ambient_noise.xml"
         pluginsList["com.aware.plugin.contacts_list"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.contacts_list/master/com.aware.plugin.contacts_list/src/main/res/xml/preferences_contacts_list.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.contacts_list/master/com.aware.plugin.contacts_list/src/main/res/xml/preferences_contacts_list.xml"
         pluginsList["com.aware.plugin.device_usage"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.device_usage/master/com.aware.plugin.device_usage/src/main/res/xml/preferences_device_usage.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.device_usage/master/com.aware.plugin.device_usage/src/main/res/xml/preferences_device_usage.xml"
         pluginsList["com.aware.plugin.esm.scheduler"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.esm.scheduler/master/com.aware.plugin.esm.scheduler/src/main/res/xml/preferences_esm_scheduler.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.esm.scheduler/master/com.aware.plugin.esm.scheduler/src/main/res/xml/preferences_esm_scheduler.xml"
         pluginsList["com.aware.plugin.fitbit"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.fitbit/master/com.aware.plugin.fitbit/src/main/res/xml/preferences_fitbit.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.fitbit/master/com.aware.plugin.fitbit/src/main/res/xml/preferences_fitbit.xml"
         pluginsList["com.aware.plugin.google.activity_recognition"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.activity_recognition/master/com.aware.plugin.google.activity_recognition/src/main/res/xml/preferences_activity_recog.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.activity_recognition/master/com.aware.plugin.google.activity_recognition/src/main/res/xml/preferences_activity_recog.xml"
         pluginsList["com.aware.plugin.google.auth"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.auth/master/com.aware.plugin.google.auth/src/main/res/xml/preferences_google_auth.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.auth/master/com.aware.plugin.google.auth/src/main/res/xml/preferences_google_auth.xml"
         pluginsList["com.aware.plugin.google.fused_location"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.fused_location/master/com.aware.plugin.google.fused_location/src/main/res/xml/preferences_fused_location.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.google.fused_location/master/com.aware.plugin.google.fused_location/src/main/res/xml/preferences_fused_location.xml"
         pluginsList["com.aware.plugin.openweather"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.openweather/master/com.aware.plugin.openweather/src/main/res/xml/preferences_openweather.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.openweather/master/com.aware.plugin.openweather/src/main/res/xml/preferences_openweather.xml"
         pluginsList["com.aware.plugin.sensortag"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.sensortag/master/com.aware.plugin.sensortag/src/main/res/xml/preferences_sensortag.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.sensortag/master/com.aware.plugin.sensortag/src/main/res/xml/preferences_sensortag.xml"
         pluginsList["com.aware.plugin.sentimental"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.sentimental/master/com.aware.plugin.sentimental/src/main/res/xml/preferences_sentimental.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.sentimental/master/com.aware.plugin.sentimental/src/main/res/xml/preferences_sentimental.xml"
         pluginsList["com.aware.plugin.studentlife.audio_final"] =
-          "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.studentlife.audio_final/master/com.aware.plugin.studentlife.audio/src/main/res/xml/preferences_conversations.xml"
+        "https://raw.githubusercontent.com/denzilferreira/com.aware.plugin.studentlife.audio_final/master/com.aware.plugin.studentlife.audio/src/main/res/xml/preferences_conversations.xml"
 
         val plugins = getPlugins(pluginsList)
         configFile.put("plugins", plugins)
@@ -308,18 +318,18 @@ class MainVerticle : AbstractVerticle() {
         vertx.fileSystem().writeFile("./aware-config.json", Buffer.buffer(configFile.encodePrettily())) { result ->
           if (result.succeeded()) {
             println("You can now configure your server by editing the aware-config.json that was automatically created. You can now stop this instance (press Ctrl+C)")
-          } else {
-            println("Failed to create aware-config.json: ${result.cause()}")
+            } else {
+              println("Failed to create aware-config.json: ${result.cause()}")
+            }
           }
         }
       }
     }
-  }
 
   /**
    * Check valid study key and number
    */
-  fun validRoute(studyInfo: JsonObject, studyNumber: Int, studyKey: String) : Boolean {
+   fun validRoute(studyInfo: JsonObject, studyNumber: Int, studyKey: String) : Boolean {
     return studyNumber == studyInfo.getInteger("study_number") && studyKey == studyInfo.getString("study_key")
   }
 
@@ -349,8 +359,8 @@ class MainVerticle : AbstractVerticle() {
             "value",
             "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
               "study_number"
-            )}/${study.getString("study_key")}"
-          )
+              )}/${study.getString("study_key")}"
+              )
           else -> awareSetting.put("value", setting.getString("defaultValue"))
         }
         sensors.add(awareSetting)
@@ -396,7 +406,7 @@ class MainVerticle : AbstractVerticle() {
   /**
    * This parses the aware-client xml file to retrieve all possible settings for a study
    */
-  fun getSensors(xmlUrl: String): JsonArray {
+   fun getSensors(xmlUrl: String): JsonArray {
     val sensors = JsonArray()
     val awarePreferences = URL(xmlUrl).openStream()
 
@@ -411,13 +421,13 @@ class MainVerticle : AbstractVerticle() {
 
         val sensor = JsonObject()
         if (child.attributes.getNamedItem("android:key") != null)
-          sensor.put("sensor", child.attributes.getNamedItem("android:key").nodeValue)
+        sensor.put("sensor", child.attributes.getNamedItem("android:key").nodeValue)
         if (child.attributes.getNamedItem("android:title") != null)
-          sensor.put("title", child.attributes.getNamedItem("android:title").nodeValue)
+        sensor.put("title", child.attributes.getNamedItem("android:title").nodeValue)
         if (child.attributes.getNamedItem("android:icon") != null)
-          sensor.put("icon", getSensorIcon(child.attributes.getNamedItem("android:icon").nodeValue))
+        sensor.put("icon", getSensorIcon(child.attributes.getNamedItem("android:icon").nodeValue))
         if (child.attributes.getNamedItem("android:summary") != null)
-          sensor.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
+        sensor.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
 
         val settings = JsonArray()
         val subChildren = child.childNodes
@@ -426,16 +436,16 @@ class MainVerticle : AbstractVerticle() {
           if (subChild != null && subChild.nodeName.contains("Preference")) {
             val setting = JsonObject()
             if (subChild.attributes.getNamedItem("android:key") != null)
-              setting.put("setting", subChild.attributes.getNamedItem("android:key").nodeValue)
+            setting.put("setting", subChild.attributes.getNamedItem("android:key").nodeValue)
             if (subChild.attributes.getNamedItem("android:title") != null)
-              setting.put("title", subChild.attributes.getNamedItem("android:title").nodeValue)
+            setting.put("title", subChild.attributes.getNamedItem("android:title").nodeValue)
             if (subChild.attributes.getNamedItem("android:defaultValue") != null)
-              setting.put("defaultValue", subChild.attributes.getNamedItem("android:defaultValue").nodeValue)
+            setting.put("defaultValue", subChild.attributes.getNamedItem("android:defaultValue").nodeValue)
             if (subChild.attributes.getNamedItem("android:summary") != null && subChild.attributes.getNamedItem("android:summary").nodeValue != "%s")
-              setting.put("summary", subChild.attributes.getNamedItem("android:summary").nodeValue)
+            setting.put("summary", subChild.attributes.getNamedItem("android:summary").nodeValue)
 
             if (setting.containsKey("defaultValue"))
-              settings.add(setting)
+            settings.add(setting)
           }
         }
         sensor.put("settings", settings)
@@ -448,7 +458,7 @@ class MainVerticle : AbstractVerticle() {
   /**
    * This retrieves asynchronously the icons for each sensor from the client source code
    */
-  private fun getSensorIcon(drawableId: String): String {
+   private fun getSensorIcon(drawableId: String): String {
     val icon = drawableId.substring(drawableId.indexOf('/') + 1)
     val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-core/src/main/res/drawable/*.png"
 
@@ -459,36 +469,36 @@ class MainVerticle : AbstractVerticle() {
     }
 
     vertx.fileSystem()
-      .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
-        if (writeFile.succeeded()) {
-          val asyncFile = writeFile.result()
-          val webClientOptions = WebClientOptions()
-            .setKeepAlive(true)
-            .setPipelining(true)
-            .setFollowRedirects(true)
-            .setSsl(true)
-            .setTrustAll(true)
+    .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
+      if (writeFile.succeeded()) {
+        val asyncFile = writeFile.result()
+        val webClientOptions = WebClientOptions()
+        .setKeepAlive(true)
+        .setPipelining(true)
+        .setFollowRedirects(true)
+        .setSsl(true)
+        .setTrustAll(true)
 
-          val client = WebClient.create(vertx, webClientOptions)
-          client.get(443, "github.com", downloadUrl.replace("*", icon))
-            .`as`(BodyCodec.pipe(asyncFile, true))
-            .send { request ->
-              if (request.succeeded()) {
-                val iconFile = request.result()
-                println("Cached $icon.png: ${iconFile.statusCode() == 200}")
-              }
-            }
+        val client = WebClient.create(vertx, webClientOptions)
+        client.get(443, "github.com", downloadUrl.replace("*", icon))
+        .`as`(BodyCodec.pipe(asyncFile, true))
+        .send { request ->
+          if (request.succeeded()) {
+            val iconFile = request.result()
+            println("Cached $icon.png: ${iconFile.statusCode() == 200}")
+          }
+        }
         } else {
           println("Unable to create file: ${writeFile.cause()}")
         }
       }
-    return "$icon.png"
-  }
+      return "$icon.png"
+    }
 
   /**
    * This parses a list of plugins' xml to retrieve plugins' settings
    */
-  private fun getPlugins(xmlUrls: HashMap<String, String>): JsonArray {
+   private fun getPlugins(xmlUrls: HashMap<String, String>): JsonArray {
     val plugins = JsonArray()
 
     for (pluginUrl in xmlUrls) {
@@ -507,11 +517,11 @@ class MainVerticle : AbstractVerticle() {
           plugin.put("package_name", pluginUrl.key)
 
           if (child.attributes.getNamedItem("android:key") != null)
-            plugin.put("plugin", child.attributes.getNamedItem("android:key").nodeValue)
+          plugin.put("plugin", child.attributes.getNamedItem("android:key").nodeValue)
           if (child.attributes.getNamedItem("android:icon") != null)
-            plugin.put("icon", child.attributes.getNamedItem("android:icon").nodeValue)
+          plugin.put("icon", child.attributes.getNamedItem("android:icon").nodeValue)
           if (child.attributes.getNamedItem("android:summary") != null)
-            plugin.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
+          plugin.put("summary", child.attributes.getNamedItem("android:summary").nodeValue)
 
           val settings = JsonArray()
           val subChildren = child.childNodes
@@ -520,16 +530,16 @@ class MainVerticle : AbstractVerticle() {
             if (subChild != null && subChild.nodeName.contains("Preference")) {
               val setting = JsonObject()
               if (subChild.attributes.getNamedItem("android:key") != null)
-                setting.put("setting", subChild.attributes.getNamedItem("android:key").nodeValue)
+              setting.put("setting", subChild.attributes.getNamedItem("android:key").nodeValue)
               if (subChild.attributes.getNamedItem("android:title") != null)
-                setting.put("title", subChild.attributes.getNamedItem("android:title").nodeValue)
+              setting.put("title", subChild.attributes.getNamedItem("android:title").nodeValue)
               if (subChild.attributes.getNamedItem("android:defaultValue") != null)
-                setting.put("defaultValue", subChild.attributes.getNamedItem("android:defaultValue").nodeValue)
+              setting.put("defaultValue", subChild.attributes.getNamedItem("android:defaultValue").nodeValue)
               if (subChild.attributes.getNamedItem("android:summary") != null && subChild.attributes.getNamedItem("android:summary").nodeValue != "%s")
-                setting.put("summary", subChild.attributes.getNamedItem("android:summary").nodeValue)
+              setting.put("summary", subChild.attributes.getNamedItem("android:summary").nodeValue)
 
               if (setting.containsKey("defaultValue"))
-                settings.add(setting)
+              settings.add(setting)
             }
           }
           plugin.put("settings", settings)
