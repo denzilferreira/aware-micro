@@ -75,7 +75,7 @@ class MainVerticle : AbstractVerticle() {
             vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
               //no QRCode yet
               if (result.failed()) {
-                vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
+                vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
                     if (write.succeeded()) {
                       val asyncQrcode = write.result()
                       val webClientOptions = WebClientOptions()
