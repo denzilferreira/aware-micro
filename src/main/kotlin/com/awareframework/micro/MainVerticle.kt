@@ -73,8 +73,9 @@ class MainVerticle : AbstractVerticle() {
         router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
           if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
             vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
-              //no QRCode yet
+
               if (result.failed()) {
+                println("Starting the process to create the QRCode.")
                 vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
                     if (write.succeeded()) {
                       val asyncQrcode = write.result()
@@ -85,9 +86,10 @@ class MainVerticle : AbstractVerticle() {
                         .setSsl(true)
                         .setTrustAll(true)
 
+                      println("Saved QRCode")
                       val client = WebClient.create(vertx, webClientOptions)
                       val serverURL =
-                        "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                        "${serverConfig.getInteger("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
                           "study_number"
                         )}/${study.getString("study_key")}"
 
@@ -114,7 +116,7 @@ class MainVerticle : AbstractVerticle() {
                   }
               } else {
                 //render cached QRCode
-
+                println("Rendering QRCode from cache.")
                 val serverURL =
                   "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
                     "study_number"
