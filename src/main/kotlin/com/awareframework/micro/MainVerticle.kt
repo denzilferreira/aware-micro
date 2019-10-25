@@ -93,7 +93,7 @@ class MainVerticle : AbstractVerticle() {
                         println("Saved QRCode")
                         val client = WebClient.create(vertx, webClientOptions)
                         val serverURL =
-                        "${serverConfig.getInteger("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                        "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
                           "study_number"
                           )}/${study.getString("study_key")}"
 
@@ -112,38 +112,36 @@ class MainVerticle : AbstractVerticle() {
                                   route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
                                 }
                               }
-                              } else {
-                                println("QRCode creation failed: ${request.cause().message}")
-                              }
-                            }
                             } else {
-                              println("QRCode creation failed: ${write.cause().message}")
+                                println("QRCode creation failed: ${request.cause().message}")
                             }
                           }
-                        } else {
-                          println("QRCode creation failed: ${mkdir.cause().message}")
-                        }
+                      } else {
+                        println("QRCode creation failed: ${write.cause().message}")
                       }
-                    )
-              }
-              } else {
-                //render cached QRCode
-                println("Rendering QRCode from cache.")
-                val serverURL =
-                "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
-                  "study_number"
-                  )}/${study.getString("study_key")}"
-
-                  pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
-                    if (pebble.succeeded()) {
-                      route.response().statusCode = 200
-                      route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
                     }
+                  } else {
+                    println("QRCode creation failed: ${mkdir.cause().message}")
                   }
+                })
+            } else {
+              //render cached QRCode
+              println("Rendering QRCode from cache.")
+              val serverURL =
+                "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                "study_number"
+              )}/${study.getString("study_key")}"
+
+              pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
+                if (pebble.succeeded()) {
+                  route.response().statusCode = 200
+                  route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
                 }
               }
             }
           }
+        }
+      }
 
         /**
          * This route is called:
