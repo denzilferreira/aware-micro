@@ -75,9 +75,9 @@ class MainVerticle : AbstractVerticle() {
             vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
               if (result.failed()) {
                 println("Starting the process to create the QRCode.")
-                vertx.fileSystem().mkdir("src/main/resources/cache/", {
-                  mkdir -> 
-                  if(mkdir.succeeded()) {
+                // vertx.fileSystem().mkdir("src/main/resources/cache/", {
+                //   mkdir -> 
+                //   if(mkdir.succeeded()) {
                     vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
 
                       if (write.succeeded()) {
@@ -119,10 +119,10 @@ class MainVerticle : AbstractVerticle() {
                         println("QRCode creation failed: ${write.cause().message}")
                       }
                     }
-                  } else {
-                    println("QRCode creation failed: ${mkdir.cause().message}")
-                  }
-                })
+                //   } else {
+                //     println("QRCode creation failed: ${mkdir.cause().message}")
+                //   }
+                // })
             } else {
               //render cached QRCode
               println("Rendering QRCode from cache.")
