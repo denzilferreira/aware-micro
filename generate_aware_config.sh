@@ -13,3 +13,4 @@ cat aware-config.json.template | \
   sed "s/%STUDY_START%/$STUDY_START/" > aware-config.json
 
 mkdir -p src/main/resources/cache
+  
