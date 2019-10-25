@@ -43,7 +43,7 @@ class MainVerticle : AbstractVerticle() {
 
     val router = Router.router(vertx)
     router.route().handler(BodyHandler.create())
-    router.route("/cache/*").handler(StaticHandler.create("cache"))
+    router.route("/cache/*").handler(StaticHandler.create())
     router.route().handler {
       println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}}")
         //"with the following data ${it.request().params().toList()}")
@@ -105,7 +105,7 @@ class MainVerticle : AbstractVerticle() {
                           .`as`(BodyCodec.pipe(asyncQrcode, true))
                           .send { request ->
                             if (request.succeeded()) {
-                              pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
+                              pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
                                 if (pebble.succeeded()) {
                                   route.response().statusCode = 200
                                   route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
