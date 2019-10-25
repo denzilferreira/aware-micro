@@ -43,7 +43,7 @@ class MainVerticle : AbstractVerticle() {
 
     val router = Router.router(vertx)
     router.route().handler(BodyHandler.create())
-    router.route("/cache/*").handler(StaticHandler.create())
+    router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
       println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}}")
         //"with the following data ${it.request().params().toList()}")
@@ -72,13 +72,13 @@ class MainVerticle : AbstractVerticle() {
          */
          router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
           if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
-            vertx.fileSystem().readFile("src/main/resources/webroot/qrcode.png") { result ->
+            vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
               if (result.failed()) {
                 println("Starting the process to create the QRCode.")
-                // vertx.fileSystem().mkdir("src/main/resources/webroot/", {
+                // vertx.fileSystem().mkdir("src/main/resources/cache/", {
                 //   mkdir -> 
                 //   if(mkdir.succeeded()) {
-                    vertx.fileSystem().open("src/main/resources/webroot/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
+                    vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
 
                       if (write.succeeded()) {
                         val asyncQrcode = write.result()
@@ -459,14 +459,14 @@ class MainVerticle : AbstractVerticle() {
     val icon = drawableId.substring(drawableId.indexOf('/') + 1)
     val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-core/src/main/res/drawable/*.png"
 
-    vertx.fileSystem().mkdir("src/main/resources/webroot") { result ->
+    vertx.fileSystem().mkdir("src/main/resources/cache") { result ->
       if (result.succeeded()) {
         println("Created cache folder")
       }
     }
 
     vertx.fileSystem()
-    .open("src/main/resources/webroot/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
+    .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
       if (writeFile.succeeded()) {
         val asyncFile = writeFile.result()
         val webClientOptions = WebClientOptions()
