@@ -73,10 +73,9 @@ class MainVerticle : AbstractVerticle() {
          router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
           if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
             vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
-
               if (result.failed()) {
                 println("Starting the process to create the QRCode.")
-                vertx.fileSystem().mkdir("src/main/resources/cache", {
+                vertx.fileSystem().mkdir("src/main/resources/cache/", {
                   mkdir -> 
                   if(mkdir.succeeded()) {
                     vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
