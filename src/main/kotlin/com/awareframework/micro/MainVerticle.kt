@@ -18,6 +18,9 @@ import io.vertx.core.net.PemKeyCertOptions
 import io.vertx.core.net.PemTrustOptions
 import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.ext.web.Router
+import io.vertx.ext.web.handler.LoggerHandler
+
+import io.vertx.ext.web.handler.LoggerFormat
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
@@ -42,6 +45,7 @@ class MainVerticle : AbstractVerticle() {
     val eventBus = vertx.eventBus()
 
     val router = Router.router(vertx)
+    router.route().handler(LoggerHandler.create(LoggerFormat.DEFAULT));
     router.route().handler(BodyHandler.create())
     router.route("/cache/*").handler(StaticHandler.create())
     router.route().handler {
