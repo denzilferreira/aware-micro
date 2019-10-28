@@ -12,3 +12,4 @@ cat aware-config.json.template | \
   sed "s/%WEBSOCKET_PORT%/$WEBSOCKET_PORT/" | \
   sed "s/%STUDY_START%/$STUDY_START/" > aware-config.json
 
+mkdir -p src/main/resources/webroot

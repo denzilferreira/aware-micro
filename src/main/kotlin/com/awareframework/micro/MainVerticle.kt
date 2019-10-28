@@ -79,7 +79,7 @@ class MainVerticle : AbstractVerticle() {
             vertx.fileSystem().readFile("src/main/resources/webroot/qrcode.png") { result ->
               if (result.failed()) {
                 println("Starting the process to create the QRCode.")
-                // vertx.fileSystem().mkdir("src/main/resources/webroot/", {
+                // vertx.fileSystem().mkdir("src/main/resources/cache/", {
                 //   mkdir -> 
                 //   if(mkdir.succeeded()) {
                     vertx.fileSystem().open("src/main/resources/webroot/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
