@@ -76,75 +76,21 @@ class MainVerticle : AbstractVerticle() {
          */
          router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
           if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
-            vertx.fileSystem().readFile("src/main/resources/webroot/qrcode.png") { result ->
-              if (result.failed()) {
-                println("Starting the process to create the QRCode.")
-                // vertx.fileSystem().mkdir("src/main/resources/cache/", {
-                //   mkdir -> 
-                //   if(mkdir.succeeded()) {
-                    vertx.fileSystem().open("src/main/resources/webroot/qrcode.png", OpenOptions().setCreate(true).setWrite(true).setRead(true)) { write ->
+            val serverURL = "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                  "study_number"
+                )}/${study.getString("study_key")}"
 
-                      if (write.succeeded()) {
-                        val asyncQrcode = write.result()
-                        val webClientOptions = WebClientOptions()
-                        .setKeepAlive(true)
-                        .setPipelining(true)
-                        .setFollowRedirects(true)
-                        .setSsl(true)
-                        .setTrustAll(true)
+            println("URL encoded for the QRCode is: $serverURL")
 
-                        println("Saved QRCode")
-                        val client = WebClient.create(vertx, webClientOptions)
-                        val serverURL =
-                        "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
-                          "study_number"
-                          )}/${study.getString("study_key")}"
-
-                          println("URL encoded for the QRCode is: $serverURL")
-
-                          client.get(
-                            443, "chart.googleapis.com",
-                            "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
-                            )
-                          .`as`(BodyCodec.pipe(asyncQrcode, true))
-                          .send { request ->
-                            if (request.succeeded()) {
-                              pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
-                                if (pebble.succeeded()) {
-                                  route.response().statusCode = 200
-                                  route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
-                                }
-                              }
-                            } else {
-                                println("QRCode creation failed: ${request.cause().message}")
-                            }
-                          }
-                      } else {
-                        println("QRCode creation failed: ${write.cause().message}")
-                      }
-                    }
-                //   } else {
-                //     println("QRCode creation failed: ${mkdir.cause().message}")
-                //   }
-                // })
-            } else {
-              //render cached QRCode
-              println("Rendering QRCode from cache.")
-              val serverURL =
-                "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
-                "study_number"
-              )}/${study.getString("study_key")}"
-
-              pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
-                if (pebble.succeeded()) {
-                  route.response().statusCode = 200
-                  route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
-                }
+            val qrcodeUrl = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
+            pebbleEngine.render(JsonObject().put("studyURL", serverURL).put("qrcodeUrl", qrcodeUrl), "templates/qrcode.peb") { pebble ->
+              if (pebble.succeeded()) {
+                route.response().statusCode = 200
+                route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
               }
-            }
-          }
+            } 
+          }    
         }
-      }
 
         /**
          * This route is called:
