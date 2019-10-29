@@ -88,8 +88,11 @@ class MainVerticle : AbstractVerticle() {
                 route.response().statusCode = 200
                 route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
               }
-            } 
-          }    
+            }
+          } else {
+            println("Invalid route");
+            println(study);
+          }
         }
 
         /**
@@ -154,6 +157,11 @@ class MainVerticle : AbstractVerticle() {
                 route.response().end()
               }
             }
+          } else {
+            println("Invalid route");
+            println(route.request());
+          route.response().statusCode = 400
+          route.response().end()
           }
         }
 
