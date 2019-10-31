@@ -132,8 +132,11 @@ class MainVerticle : AbstractVerticle() {
 
         router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey/:table/:operation").handler { route ->
           if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
+            val table = route.request().getParam("table")
+
             when (route.request().getParam("operation")) {
               "create_table" -> {
+                println("Creating table $table")
                 eventBus.publish("createTable", route.request().getParam("table"))
                 route.response().statusCode = 200
                 route.response().end()
