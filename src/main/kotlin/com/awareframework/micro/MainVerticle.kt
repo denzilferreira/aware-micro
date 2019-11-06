@@ -67,6 +67,9 @@ class MainVerticle : AbstractVerticle() {
         val serverConfig = parameters.getJsonObject("server")
         val study = parameters.getJsonObject("study")
 
+        serverOptions.host = serverConfig.getString("server_host")
+        serverOptions.setSsl(true)
+
         /**
          * Generate QRCode to join the study using Google's Chart API
          */
