@@ -76,7 +76,7 @@ class MainVerticle : AbstractVerticle() {
          */
          router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
           if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
-            val serverURL = "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+            val serverURL = "${serverConfig.getString("server_host")}:443/index.php/${study.getInteger(
                   "study_number"
                 )}/${study.getString("study_key")}"
 
