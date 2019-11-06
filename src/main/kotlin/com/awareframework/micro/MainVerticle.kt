@@ -170,7 +170,7 @@ class MainVerticle : AbstractVerticle() {
          */
          router.route(HttpMethod.GET, "/").handler { route ->
           route.response().putHeader("content-type", "text/html").end(
-            "Hello from AWARE Micro!<br/>Join study: <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
+            "Hello from AWARE Micro!<br/>Join study: <a href=\"${serverConfig.getString("server_host")}:443/${study.getInteger(
               "study_number"
               )}/${study.getString("study_key")}\">HERE</a>"
               )
@@ -312,7 +312,7 @@ class MainVerticle : AbstractVerticle() {
           "status_webservice" -> awareSetting.put("value", "true")
           "webservice_server" -> awareSetting.put(
             "value",
-            "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+            "${serverConfig.getString("server_host")}:443/index.php/${study.getInteger(
               "study_number"
               )}/${study.getString("study_key")}"
               )
