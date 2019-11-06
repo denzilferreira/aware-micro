@@ -207,6 +207,18 @@ class MainVerticle : AbstractVerticle() {
           )
         }
 
+        //Use SSL either from pem certificates or self-signed (compatible with Android)
+        if (serverConfig.getString("path_key_pem").isNotEmpty() && serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString("path_fullchain_pem").isNotEmpty()) {
+          serverOptions.pemTrustOptions = PemTrustOptions().addCertPath(serverConfig.getString("path_fullchain_pem"))
+          serverOptions.pemKeyCertOptions = PemKeyCertOptions()
+            .setKeyPath(serverConfig.getString("path_key_pem"))
+            .setCertPath(serverConfig.getString("path_cert_pem"))
+        } else {
+          val selfSignedCertificate = SelfSignedCertificate.create(serverConfig.getString("server_host"))
+          serverOptions.keyCertOptions = selfSignedCertificate.keyCertOptions()
+          serverOptions.trustOptions = selfSignedCertificate.trustOptions()
+        }
+
         vertx.createHttpServer(serverOptions)
           .requestHandler(router)
           .listen(serverConfig.getInteger("server_port")) { server ->
@@ -245,7 +257,7 @@ class MainVerticle : AbstractVerticle() {
         server.put("database_user", "databaseUser")
         server.put("database_pwd", "databasePassword")
         server.put("database_port", 3306)
-        server.put("server_host", "http://localhost")
+        server.put("server_host", "https://localhost")
         server.put("server_port", 8080)
         server.put("websocket_port", 8081)
         server.put("path_fullchain_pem", "")
