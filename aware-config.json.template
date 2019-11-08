@@ -131,7 +131,7 @@
     "settings" : [ {
       "setting" : "status_bluetooth",
       "title" : "Activate",
-      "defaultValue" : "false"
+      "defaultValue" : "true"
     }, {
       "setting" : "frequency_bluetooth",
       "title" : "Scanning update frequency",
@@ -146,12 +146,12 @@
     "settings" : [ {
       "setting" : "status_calls",
       "title" : "Call events",
-      "defaultValue" : "false",
+      "defaultValue" : "true",
       "summary" : "Calls made, received, missed"
     }, {
       "setting" : "status_messages",
       "title" : "Message events",
-      "defaultValue" : "false",
+      "defaultValue" : "true",
       "summary" : "Sent or received SMS/MMS"
     } ]
   }, {
@@ -433,7 +433,7 @@
     "settings" : [ {
       "setting" : "status_screen",
       "title" : "Screen usage",
-      "defaultValue" : "false",
+      "defaultValue" : "true",
       "summary" : "Capture screen events (on, off, locked, unlocked)"
     }, {
       "setting" : "status_touch",
@@ -500,7 +500,7 @@
     "settings" : [ {
       "setting" : "status_wifi",
       "title" : "Active",
-      "defaultValue" : "false"
+      "defaultValue" : "true"
     }, {
       "setting" : "frequency_wifi",
       "title" : "Wi-Fi scanning update frequency",
@@ -632,7 +632,7 @@
     "settings" : [ {
       "setting" : "status_plugin_ambient_noise",
       "title" : "Active",
-      "defaultValue" : "false",
+      "defaultValue" : "true",
       "summary" : "Detects silent from noisy surroundings."
     }, {
       "setting" : "frequency_plugin_ambient_noise",
@@ -661,7 +661,7 @@
     "settings" : [ {
       "setting" : "status_plugin_google_activity_recognition",
       "title" : "Active",
-      "defaultValue" : "false",
+      "defaultValue" : "true",
       "summary" : "Detects: still, on foot (walking, running), in vehicle, on bicycle"
     }, {
       "setting" : "frequency_plugin_google_activity_recognition",
@@ -786,7 +786,7 @@
     "plugin" : "plugin_google_fused_location",
     "settings" : [ {
       "setting" : "status_google_fused_location",
-      "defaultValue" : "false",
+      "defaultValue" : "true",
       "summary" : "Activate/deactivate plugin"
     }, {
       "setting" : "frequency_google_fused_location",
@@ -829,7 +829,7 @@
     "settings" : [ {
       "setting" : "status_plugin_studentlife_audio",
       "title" : "Detect conversations",
-      "defaultValue" : "false",
+      "defaultValue" : "true",
       "summary" : "Activate/deactivate plugin"
     }, {
       "setting" : "plugin_conversations_delay",
