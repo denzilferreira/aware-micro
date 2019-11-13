@@ -88,8 +88,8 @@ class MainVerticle : AbstractVerticle() {
                 route.response().statusCode = 200
                 route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
               }
-            } 
-          }    
+            }
+          }
         }
 
         /**
@@ -181,6 +181,9 @@ class MainVerticle : AbstractVerticle() {
               }
               "postgres" -> {
                 vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
+              }
+              "influxdb" -> {
+                vertx.deployVerticle("com.awareframework.micro.InfluxDbVerticle")
               }
               else -> {
                 println("Not storing data into a database engine: mysql, postgres")

@@ -29,8 +29,13 @@ services:
       - MYSQL_DATABASE=${DB_NAME}
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PWD}
-    image: mysql:5.7.28
+    image: mysql:5.7.26
     ports:
       - "3306:3306"
     volumes:
       - /var/lib/mysql
+
+networks:
+  default:
+    external:
+      name: local-moodring

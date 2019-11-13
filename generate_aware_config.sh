@@ -2,7 +2,7 @@
 
 cat aware-config.json.template | \
   sed "s/%DB_ENGINE%/$DB_ENGINE/" | \
-  sed "s/%DB_HOST%/$DB_HOST/" | \
+  sed "s|%DB_HOST%|$DB_HOST|" | \
   sed "s/%DB_NAME%/$DB_NAME/" | \
   sed "s/%DB_USER%/$DB_USER/" | \
   sed "s/%DB_PWD%/$DB_PWD/" | \

@@ -41,6 +41,7 @@ dependencies {
   implementation "io.vertx:vertx-web-templ-pebble:$vertxVersion"
   implementation "org.slf4j:slf4j-nop:1.7.25"
   implementation "io.vertx:vertx-core:$vertxVersion"
+  implementation 'org.influxdb:influxdb-java:2.10'
 }
 
 compileKotlin {
