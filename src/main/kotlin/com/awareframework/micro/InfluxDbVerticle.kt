@@ -13,12 +13,14 @@ import org.influxdb.InfluxDBFactory
 import org.influxdb.BatchOptions
 import java.util.concurrent.TimeUnit
 import org.influxdb.dto.Point
+import org.influxdb.dto.BatchPoints
 import java.util.stream.Collectors
 
 class InfluxDbVerticle : AbstractVerticle() {
 
   private lateinit var parameters: JsonObject
   private lateinit var influxDB: InfluxDB
+  private lateinit var batchPoints: BatchPoints
 
   override fun start(startPromise: Promise<Void>?) {
     super.start(startPromise)
@@ -77,20 +79,31 @@ class InfluxDbVerticle : AbstractVerticle() {
 
   fun insertData(device_id: String, table: String, data: JsonArray) {
     val rows = data.size()
+
+    batchPoints = BatchPoints.database("awaredb").build()
+
     for (i in 0 until data.size()) {
       val entry = data.getJsonObject(i)
-
-      println(System.currentTimeMillis())
 
       var point = Point.measurement(table)
                        .time(entry.getLong("timestamp"), TimeUnit.MILLISECONDS)
                        .tag("device_id", device_id)
 
-      point.addField("valor", 10)
+      entry.forEach { (key, value) ->
+        when (value) {
+           is String -> point.addField(key, value)
+           is Int -> point.addField(key, value)
+           is Double -> point.addField(key, value)
+           is Long -> point.addField(key, value.toLong())
+           is Float -> point.addField(key, value)
+           else -> println("Unknown Type")
+        }
+      }
 
-
-      influxDB.write(point.build());
+      batchPoints.point(point.build());
     }
+
+    influxDB.write(batchPoints)
   }
 
   override fun stop() {
