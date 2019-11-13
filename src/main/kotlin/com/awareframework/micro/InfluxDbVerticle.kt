@@ -80,12 +80,14 @@ class InfluxDbVerticle : AbstractVerticle() {
     for (i in 0 until data.size()) {
       val entry = data.getJsonObject(i)
 
-      var point = Point.measurement(table).time(entry.getLong("timestamp"), TimeUnit.SECONDS)
+      println(System.currentTimeMillis())
 
-      point.tag("device_id", device_id)
-      point.addField("device_id", device_id)
+      var point = Point.measurement(table)
+                       .time(entry.getLong("timestamp"), TimeUnit.MILLISECONDS)
+                       .tag("device_id", device_id)
 
-      entry.forEach { (key, value) -> println("$key $value") }
+      point.addField("valor", 10)
+
 
       influxDB.write(point.build());
     }
