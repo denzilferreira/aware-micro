@@ -84,9 +84,9 @@ class MySQLVerticle : AbstractVerticle() {
   }
 
   fun insertData(device_id: String, table: String, data: JsonArray) {
-    sqlClient.getConnection {
-      if (it.succeeded()) {
-        val connection = it.result()
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val connection = connectionResult.result()
         val rows = data.size()
         val values = ArrayList<String>()
         for (i in 0 until data.size()) {
@@ -97,9 +97,9 @@ class MySQLVerticle : AbstractVerticle() {
           "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(
             Collectors.joining(",")
           )}"
-        connection.query(insertBatch) {
-          if (it.failed()) {
-            println("Failed to process batch: ${it.cause().message}")
+        connection.query(insertBatch) { result ->
+          if (result.failed()) {
+            println("Failed to process batch: ${result.cause().message}")
             connection.close()
           } else {
             println("$device_id saved to $table: $rows records")
@@ -108,7 +108,7 @@ class MySQLVerticle : AbstractVerticle() {
         }
 
       } else {
-        println("Failed to establish connection: ${it.cause().message}")
+        println("Failed to establish connection: ${connectionResult.cause().message}")
       }
     }
   }

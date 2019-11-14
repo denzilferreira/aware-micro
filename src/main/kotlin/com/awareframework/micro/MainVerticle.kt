@@ -26,8 +26,15 @@ import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
 import io.vertx.kotlin.core.json.get
+import sun.security.tools.keytool.CertAndKeyGen
+import sun.security.x509.X500Name
 import java.net.URL
+import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.cert.X509Certificate
+import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
+import kotlin.collections.HashMap
 
 class MainVerticle : AbstractVerticle() {
 
@@ -38,14 +45,14 @@ class MainVerticle : AbstractVerticle() {
     println("AWARE Micro initializing...")
 
     val serverOptions = HttpServerOptions()
-    val pebbleEngine = PebbleTemplateEngine.create(vertx)
+    val pebbleEngine = PebbleTemplateEngine.create(PebbleEngine.Builder().cacheActive(false).build())
     val eventBus = vertx.eventBus()
 
     val router = Router.router(vertx)
     router.route().handler(BodyHandler.create())
     router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
-      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}}")
+      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}} \"with the following data ${it.request().params().toList()}")
         //"with the following data ${it.request().params().toList()}")
       it.next()
     }
@@ -68,7 +75,6 @@ class MainVerticle : AbstractVerticle() {
         val study = parameters.getJsonObject("study")
 
         serverOptions.host = serverConfig.getString("server_host")
-        serverOptions.setSsl(true)
 
         /**
          * Generate QRCode to join the study using Google's Chart API
@@ -216,10 +222,7 @@ class MainVerticle : AbstractVerticle() {
           serverOptions.pemKeyCertOptions = PemKeyCertOptions()
             .setKeyPath(serverConfig.getString("path_key_pem"))
             .setCertPath(serverConfig.getString("path_cert_pem"))
-        } else {
-          val selfSignedCertificate = SelfSignedCertificate.create(serverConfig.getString("server_host"))
-          serverOptions.keyCertOptions = selfSignedCertificate.keyCertOptions()
-          serverOptions.trustOptions = selfSignedCertificate.trustOptions()
+          serverOptions.isSsl = true
         }
 
         vertx.createHttpServer(serverOptions)

@@ -30,7 +30,7 @@ class WebsocketVerticle : AbstractVerticle() {
 
     eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
       val postData = receivedMessage.body()
-      if(::websocketServer.isInitialized) {
+      if(::websocketServer.isInitialized && !websocketServer.isClosed) {
         websocketServer.writeTextMessage(postData.encode())
       }
     }
