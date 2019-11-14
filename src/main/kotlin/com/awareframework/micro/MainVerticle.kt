@@ -41,8 +41,7 @@ class MainVerticle : AbstractVerticle() {
     router.route().handler(BodyHandler.create())
     router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
-      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}} \"with the following data ${it.request().params().toList()}")
-      //"with the following data ${it.request().params().toList()}")
+      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()} with the following data ${it.request().params().toList()}")
       it.next()
     }
 
@@ -75,63 +74,46 @@ class MainVerticle : AbstractVerticle() {
               route.request().getParam("studyKey")
             )
           ) {
-            vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
-              //no QRCode yet
-              if (result.failed()) {
-                vertx.fileSystem()
-                  .open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
-                    if (write.succeeded()) {
-                      val asyncQrcode = write.result()
-                      val webClientOptions = WebClientOptions()
-                        .setKeepAlive(true)
-                        .setPipelining(true)
-                        .setFollowRedirects(true)
-                        .setSsl(true)
-                        .setTrustAll(true)
+            vertx.fileSystem().delete("src/main/resources/cache/qrcode.png") {
+              if (it.succeeded()) println("Cleared old qrcode...")
+            }
+            vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setTruncateExisting(true).setCreate(true).setWrite(true)) { write ->
+                if (write.succeeded()) {
+                  val asyncQrcode = write.result()
+                  val webClientOptions = WebClientOptions()
+                    .setKeepAlive(true)
+                    .setPipelining(true)
+                    .setFollowRedirects(true)
+                    .setSsl(true)
+                    .setTrustAll(true)
 
-                      val client = WebClient.create(vertx, webClientOptions)
-                      val serverURL =
-                        "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
-                          "study_number"
-                        )}/${study.getString("study_key")}"
+                  val client = WebClient.create(vertx, webClientOptions)
+                  val serverURL =
+                    "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                      "study_number"
+                    )}/${study.getString("study_key")}"
 
-                      println("URL encoded for the QRCode is: $serverURL")
+                  println("URL encoded for the QRCode is: $serverURL")
 
-                      client.get(
-                        443, "chart.googleapis.com",
-                        "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
-                      )
-                        .`as`(BodyCodec.pipe(asyncQrcode, true))
-                        .send { request ->
-                          if (request.succeeded()) {
-                            pebbleEngine.render(JsonObject(), "templates/qrcode.peb") { pebble ->
-                              if (pebble.succeeded()) {
-                                route.response().statusCode = 200
-                                route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
-                              }
-                            }
-                          } else {
-                            println("QRCode creation failed: ${request.cause().message}")
+                  client.get(
+                    443, "chart.googleapis.com",
+                    "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
+                  )
+                    .`as`(BodyCodec.pipe(asyncQrcode, true))
+                    .send { request ->
+                      if (request.succeeded()) {
+                        pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
+                          if (pebble.succeeded()) {
+                            route.response().statusCode = 200
+                            route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
                           }
                         }
+                      } else {
+                        println("QRCode creation failed: ${request.cause().message}")
+                      }
                     }
-                  }
-              } else {
-                //render cached QRCode
-
-                val serverURL =
-                  "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
-                    "study_number"
-                  )}/${study.getString("study_key")}"
-
-                pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
-                  if (pebble.succeeded()) {
-                    route.response().statusCode = 200
-                    route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
-                  }
                 }
               }
-            }
           }
         }
 
@@ -227,14 +209,10 @@ class MainVerticle : AbstractVerticle() {
           )
         }
 
-        //Use SSL either from pem certificates or self-signed (compatible with Android)
-        if (serverConfig.getString("path_key_pem").isNotEmpty() && serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString(
-            "path_fullchain_pem"
-          ).isNotEmpty()
-        ) {
-          serverOptions.pemTrustOptions = PemTrustOptions().addCertPath(serverConfig.getString("path_fullchain_pem"))
+        //Use SSL
+        if (serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString("path_fullchain_pem").isNotEmpty()) {
           serverOptions.pemKeyCertOptions = PemKeyCertOptions()
-            .setKeyPath(serverConfig.getString("path_key_pem"))
+            .setKeyPath(serverConfig.getString("path_fullchain_pem"))
             .setCertPath(serverConfig.getString("path_cert_pem"))
           serverOptions.isSsl = true
         }
@@ -277,12 +255,11 @@ class MainVerticle : AbstractVerticle() {
         server.put("database_user", "databaseUser")
         server.put("database_pwd", "databasePassword")
         server.put("database_port", 3306)
-        server.put("server_host", "https://localhost")
+        server.put("server_host", "http://localhost")
         server.put("server_port", 8080)
         server.put("websocket_port", 8081)
         server.put("path_fullchain_pem", "")
         server.put("path_cert_pem", "")
-        server.put("path_key_pem", "")
         configFile.put("server", server)
 
         //study info
