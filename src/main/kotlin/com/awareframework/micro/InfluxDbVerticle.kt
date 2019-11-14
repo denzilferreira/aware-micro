@@ -94,7 +94,7 @@ class InfluxDbVerticle : AbstractVerticle() {
            is String -> point.addField(key, value)
            is Int -> point.addField(key, value)
            is Double -> point.addField(key, value)
-           is Long -> point.addField(key, value.toLong())
+           is Long -> point.addField(key, value)
            is Float -> point.addField(key, value)
            else -> println("Unknown Type")
         }
