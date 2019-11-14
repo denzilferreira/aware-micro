@@ -210,9 +210,10 @@ class MainVerticle : AbstractVerticle() {
         }
 
         //Use SSL
-        if (serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString("path_fullchain_pem").isNotEmpty()) {
+        if (serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString("path_fullchain_pem").isNotEmpty() && serverConfig.getString("path_key_pem").isNotEmpty()) {
+          serverOptions.pemTrustOptions = PemTrustOptions().addCertPath(serverConfig.getString("path_fullchain_pem"))
           serverOptions.pemKeyCertOptions = PemKeyCertOptions()
-            .setKeyPath(serverConfig.getString("path_fullchain_pem"))
+            .setKeyPath(serverConfig.getString("path_key_pem"))
             .setCertPath(serverConfig.getString("path_cert_pem"))
           serverOptions.isSsl = true
         }
@@ -260,6 +261,7 @@ class MainVerticle : AbstractVerticle() {
         server.put("websocket_port", 8081)
         server.put("path_fullchain_pem", "")
         server.put("path_cert_pem", "")
+        server.put("path_key_pem","")
         configFile.put("server", server)
 
         //study info
