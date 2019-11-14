@@ -1,13 +1,11 @@
 package com.awareframework.micro
 
 import com.mitchellbosecke.pebble.PebbleEngine
-import io.netty.handler.codec.http.HttpStatusClass
 import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.*
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.eventbus.DeliveryOptions
 import io.vertx.core.file.OpenOptions
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpMethod
@@ -16,23 +14,14 @@ import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.core.net.PemKeyCertOptions
 import io.vertx.core.net.PemTrustOptions
-import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.ext.web.Router
-import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.ext.web.codec.BodyCodec
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
-import io.vertx.kotlin.core.json.get
-import sun.security.tools.keytool.CertAndKeyGen
-import sun.security.x509.X500Name
 import java.net.URL
-import java.security.KeyStore
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
-import java.util.*
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.collections.HashMap
 
@@ -53,7 +42,7 @@ class MainVerticle : AbstractVerticle() {
     router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
       println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()}} \"with the following data ${it.request().params().toList()}")
-        //"with the following data ${it.request().params().toList()}")
+      //"with the following data ${it.request().params().toList()}")
       it.next()
     }
 
@@ -80,11 +69,17 @@ class MainVerticle : AbstractVerticle() {
          * Generate QRCode to join the study using Google's Chart API
          */
         router.route(HttpMethod.GET, "/:studyNumber/:studyKey").handler { route ->
-          if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
+          if (validRoute(
+              study,
+              route.request().getParam("studyNumber").toInt(),
+              route.request().getParam("studyKey")
+            )
+          ) {
             vertx.fileSystem().readFile("src/main/resources/cache/qrcode.png") { result ->
               //no QRCode yet
               if (result.failed()) {
-                vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
+                vertx.fileSystem()
+                  .open("src/main/resources/cache/qrcode.png", OpenOptions().setCreate(true).setWrite(true)) { write ->
                     if (write.succeeded()) {
                       val asyncQrcode = write.result()
                       val webClientOptions = WebClientOptions()
@@ -146,11 +141,19 @@ class MainVerticle : AbstractVerticle() {
          * - when checking study status with the study_check=1.
          */
         router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey").handler { route ->
-          if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
+          if (validRoute(
+              study,
+              route.request().getParam("studyNumber").toInt(),
+              route.request().getParam("studyKey")
+            )
+          ) {
             if (route.request().getFormAttribute("study_check") == "1") {
               val status = JsonObject()
               status.put("status", study.getBoolean("study_active"))
-              status.put("config", "[]") //NOTE: if we send the configuration, it will keep reapplying the settings on legacy clients. Sending empty JsonArray (i.e., no changes)
+              status.put(
+                "config",
+                "[]"
+              ) //NOTE: if we send the configuration, it will keep reapplying the settings on legacy clients. Sending empty JsonArray (i.e., no changes)
               route.response().end(JsonArray().add(status).encode())
               route.next()
             } else {
@@ -179,7 +182,12 @@ class MainVerticle : AbstractVerticle() {
         }
 
         router.route(HttpMethod.POST, "/index.php/:studyNumber/:studyKey/:table/:operation").handler { route ->
-          if (validRoute(study, route.request().getParam("studyNumber").toInt(), route.request().getParam("studyKey"))) {
+          if (validRoute(
+              study,
+              route.request().getParam("studyNumber").toInt(),
+              route.request().getParam("studyKey")
+            )
+          ) {
             when (route.request().getParam("operation")) {
               "create_table" -> {
                 eventBus.publish("createTable", route.request().getParam("table"))
@@ -187,7 +195,8 @@ class MainVerticle : AbstractVerticle() {
                 route.response().end()
               }
               "insert" -> {
-                eventBus.publish("insertData",
+                eventBus.publish(
+                  "insertData",
                   JsonObject()
                     .put("table", route.request().getParam("table"))
                     .put("device_id", route.request().getFormAttribute("device_id"))
@@ -210,14 +219,19 @@ class MainVerticle : AbstractVerticle() {
          */
         router.route(HttpMethod.GET, "/").handler { route ->
           route.response().putHeader("content-type", "text/html").end(
-            "Hello from AWARE Micro!<br/>Join study: <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/${study.getInteger(
+            "Hello from AWARE Micro!<br/>Join study: <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger(
+              "server_port"
+            )}/${study.getInteger(
               "study_number"
             )}/${study.getString("study_key")}\">HERE</a>"
           )
         }
 
         //Use SSL either from pem certificates or self-signed (compatible with Android)
-        if (serverConfig.getString("path_key_pem").isNotEmpty() && serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString("path_fullchain_pem").isNotEmpty()) {
+        if (serverConfig.getString("path_key_pem").isNotEmpty() && serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString(
+            "path_fullchain_pem"
+          ).isNotEmpty()
+        ) {
           serverOptions.pemTrustOptions = PemTrustOptions().addCertPath(serverConfig.getString("path_fullchain_pem"))
           serverOptions.pemKeyCertOptions = PemKeyCertOptions()
             .setKeyPath(serverConfig.getString("path_key_pem"))
@@ -333,7 +347,7 @@ class MainVerticle : AbstractVerticle() {
   /**
    * Check valid study key and number
    */
-  fun validRoute(studyInfo: JsonObject, studyNumber: Int, studyKey: String) : Boolean {
+  fun validRoute(studyInfo: JsonObject, studyNumber: Int, studyKey: String): Boolean {
     return studyNumber == studyInfo.getInteger("study_number") && studyKey == studyInfo.getString("study_key")
   }
 
