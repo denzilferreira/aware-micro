@@ -45,9 +45,13 @@ class InfluxDbVerticle : AbstractVerticle() {
         val serverConfig = parameters.getJsonObject("server")
         val host = serverConfig.getString("database_host")
         val port = serverConfig.getInteger("database_port")
+        val user = serverConfig.getInteger("database_user")
+        val password = serverConfig.getInteger("database_pwd")
 
         influxDB = InfluxDBFactory.connect(
-          "$host:$port"
+          "$host:$port",
+          user,
+          password
         );
 
         println("Connected to InfluxDB")
