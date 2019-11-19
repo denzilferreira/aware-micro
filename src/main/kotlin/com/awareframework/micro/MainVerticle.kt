@@ -4,11 +4,13 @@ import com.mitchellbosecke.pebble.PebbleEngine
 import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
-import io.vertx.core.*
+import io.vertx.core.AbstractVerticle
+import io.vertx.core.Promise
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.OpenOptions
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpMethod
+import io.vertx.core.http.HttpServer
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
@@ -23,11 +25,11 @@ import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.templ.pebble.PebbleTemplateEngine
 import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
-import kotlin.collections.HashMap
 
 class MainVerticle : AbstractVerticle() {
 
   private lateinit var parameters: JsonObject
+  private lateinit var httpServer: HttpServer
 
   override fun start(startPromise: Promise<Void>) {
 
@@ -45,14 +47,14 @@ class MainVerticle : AbstractVerticle() {
       it.next()
     }
 
-    val configStore = ConfigStoreOptions()
+    val configJsonFile = ConfigStoreOptions()
       .setType("file")
       .setFormat("json")
-      .setConfig(JsonObject().put("path", "aware-config.json"))
+      .setConfig(JsonObject().put("path", "./aware-config.json"))
 
     val configRetrieverOptions = ConfigRetrieverOptions()
-      .addStore(configStore)
       .setScanPeriod(5000)
+      .addStore(configJsonFile)
 
     val configReader = ConfigRetriever.create(vertx, configRetrieverOptions)
     configReader.getConfig { config ->
@@ -74,46 +76,49 @@ class MainVerticle : AbstractVerticle() {
               route.request().getParam("studyKey")
             )
           ) {
-            vertx.fileSystem().delete("src/main/resources/cache/qrcode.png") {
+            vertx.fileSystem().delete("./cache/qrcode.png") {
               if (it.succeeded()) println("Cleared old qrcode...")
             }
-            vertx.fileSystem().open("src/main/resources/cache/qrcode.png", OpenOptions().setTruncateExisting(true).setCreate(true).setWrite(true)) { write ->
-                if (write.succeeded()) {
-                  val asyncQrcode = write.result()
-                  val webClientOptions = WebClientOptions()
-                    .setKeepAlive(true)
-                    .setPipelining(true)
-                    .setFollowRedirects(true)
-                    .setSsl(true)
-                    .setTrustAll(true)
+            vertx.fileSystem().open(
+              "./cache/qrcode.png",
+              OpenOptions().setTruncateExisting(true).setCreate(true).setWrite(true)
+            ) { write ->
+              if (write.succeeded()) {
+                val asyncQrcode = write.result()
+                val webClientOptions = WebClientOptions()
+                  .setKeepAlive(true)
+                  .setPipelining(true)
+                  .setFollowRedirects(true)
+                  .setSsl(true)
+                  .setTrustAll(true)
 
-                  val client = WebClient.create(vertx, webClientOptions)
-                  val serverURL =
-                    "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
-                      "study_number"
-                    )}/${study.getString("study_key")}"
+                val client = WebClient.create(vertx, webClientOptions)
+                val serverURL =
+                  "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                    "study_number"
+                  )}/${study.getString("study_key")}"
 
-                  println("URL encoded for the QRCode is: $serverURL")
+                println("URL encoded for the QRCode is: $serverURL")
 
-                  client.get(
-                    443, "chart.googleapis.com",
-                    "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
-                  )
-                    .`as`(BodyCodec.pipe(asyncQrcode, true))
-                    .send { request ->
-                      if (request.succeeded()) {
-                        pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
-                          if (pebble.succeeded()) {
-                            route.response().statusCode = 200
-                            route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
-                          }
+                client.get(
+                  443, "chart.googleapis.com",
+                  "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
+                )
+                  .`as`(BodyCodec.pipe(asyncQrcode, true))
+                  .send { request ->
+                    if (request.succeeded()) {
+                      pebbleEngine.render(JsonObject().put("studyURL", serverURL), "templates/qrcode.peb") { pebble ->
+                        if (pebble.succeeded()) {
+                          route.response().statusCode = 200
+                          route.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/html").end(pebble.result())
                         }
-                      } else {
-                        println("QRCode creation failed: ${request.cause().message}")
                       }
+                    } else {
+                      println("QRCode creation failed: ${request.cause().message}")
                     }
-                }
+                  }
               }
+            }
           }
         }
 
@@ -142,6 +147,9 @@ class MainVerticle : AbstractVerticle() {
               println("Study configuration: ${getStudyConfig().encodePrettily()}")
               route.response().end(getStudyConfig().encode())
             }
+          } else {
+            route.response().statusCode = 404
+            route.response().end()
           }
         }
 
@@ -188,11 +196,13 @@ class MainVerticle : AbstractVerticle() {
                 route.response().end()
               }
               else -> {
-                //no-op
-                route.response().statusCode = 200
+                route.response().statusCode = 404
                 route.response().end()
               }
             }
+          } else {
+            route.response().statusCode = 404
+            route.response().end()
           }
         }
 
@@ -210,7 +220,10 @@ class MainVerticle : AbstractVerticle() {
         }
 
         //Use SSL
-        if (serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString("path_fullchain_pem").isNotEmpty() && serverConfig.getString("path_key_pem").isNotEmpty()) {
+        if (serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString("path_fullchain_pem").isNotEmpty() && serverConfig.getString(
+            "path_key_pem"
+          ).isNotEmpty()
+        ) {
           serverOptions.pemTrustOptions = PemTrustOptions().addCertPath(serverConfig.getString("path_fullchain_pem"))
           serverOptions.pemKeyCertOptions = PemKeyCertOptions()
             .setKeyPath(serverConfig.getString("path_key_pem"))
@@ -218,7 +231,7 @@ class MainVerticle : AbstractVerticle() {
           serverOptions.isSsl = true
         }
 
-        vertx.createHttpServer(serverOptions)
+        httpServer = vertx.createHttpServer(serverOptions)
           .requestHandler(router)
           .listen(serverConfig.getInteger("server_port")) { server ->
             if (server.succeeded()) {
@@ -244,6 +257,54 @@ class MainVerticle : AbstractVerticle() {
             }
           }
 
+        configReader.listen { change ->
+          val newConfig = change.newConfiguration
+          httpServer.close()
+
+          val newServerConfig = newConfig.getJsonObject("server")
+          val newServerOptions = HttpServerOptions()
+
+          if (newServerConfig.getString("path_cert_pem").isNotEmpty() && newServerConfig.getString("path_fullchain_pem").isNotEmpty() && newServerConfig.getString(
+              "path_key_pem"
+            ).isNotEmpty()
+          ) {
+            newServerOptions.pemTrustOptions = PemTrustOptions().addCertPath(newServerConfig.getString("path_fullchain_pem"))
+            newServerOptions.pemKeyCertOptions = PemKeyCertOptions()
+              .setKeyPath(newServerConfig.getString("path_key_pem"))
+              .setCertPath(newServerConfig.getString("path_cert_pem"))
+            newServerOptions.isSsl = true
+          }
+
+          httpServer = vertx.createHttpServer(newServerOptions)
+            .requestHandler(router)
+            .listen(newServerConfig.getInteger("server_port")) { server ->
+              if (server.succeeded()) {
+                when (newServerConfig.getString("database_engine")) {
+                  "mysql" -> {
+                    vertx.undeploy("com.awareframework.micro.MySQLVerticle")
+                    vertx.deployVerticle("com.awareframework.micro.MySQLVerticle")
+                  }
+                  "postgres" -> {
+                    vertx.undeploy("com.awareframework.micro.PostgresVerticle")
+                    vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
+                  }
+                  else -> {
+                    println("Not storing data into a database engine: mysql, postgres")
+                  }
+                }
+
+                vertx.undeploy("com.awareframework.micro.WebsocketVerticle")
+                vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
+
+                println("AWARE Micro API at ${newServerConfig.getString("server_host")}:${newServerConfig.getInteger("server_port")}")
+                startPromise.complete()
+              } else {
+                println("AWARE Micro initialisation failed! Because: ${server.cause()}")
+                startPromise.fail(server.cause());
+              }
+            }
+        }
+
       } else { //this is a fresh instance, no server created yet.
 
         val configFile = JsonObject()
@@ -261,7 +322,7 @@ class MainVerticle : AbstractVerticle() {
         server.put("websocket_port", 8081)
         server.put("path_fullchain_pem", "")
         server.put("path_cert_pem", "")
-        server.put("path_key_pem","")
+        server.put("path_key_pem", "")
         configFile.put("server", server)
 
         //study info
@@ -459,14 +520,14 @@ class MainVerticle : AbstractVerticle() {
     val icon = drawableId.substring(drawableId.indexOf('/') + 1)
     val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-core/src/main/res/drawable/*.png"
 
-    vertx.fileSystem().mkdir("src/main/resources/cache") { result ->
+    vertx.fileSystem().mkdir("./cache") { result ->
       if (result.succeeded()) {
         println("Created cache folder")
       }
     }
 
     vertx.fileSystem()
-      .open("src/main/resources/cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
+      .open("./cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
         if (writeFile.succeeded()) {
           val asyncFile = writeFile.result()
           val webClientOptions = WebClientOptions()
