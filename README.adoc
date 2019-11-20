@@ -21,6 +21,13 @@ sudo dnf install java-latest-openjdk-devel
 ```
 
 Set the default Java compiler to the latest JDK and choose the JDK, not JRE.
+
+Debian/Ubuntu
+```
+sudo update-alternatives --config java
+```
+
+CentOS/Fedora
 ```
 sudo alternatives --config java
 ```
