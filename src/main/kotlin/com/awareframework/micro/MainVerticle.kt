@@ -148,7 +148,7 @@ class MainVerticle : AbstractVerticle() {
               route.response().end(getStudyConfig().encode())
             }
           } else {
-            route.response().statusCode = 404
+            route.response().statusCode = 401
             route.response().end()
           }
         }
@@ -168,6 +168,9 @@ class MainVerticle : AbstractVerticle() {
         router.route(HttpMethod.GET, "/index.php/webservice/client_get_study_info/:studyKey").handler { route ->
           if (route.request().getParam("studyKey") == study.getString("study_key")) {
             route.response().end(study.encode())
+          } else {
+            route.response().statusCode = 401
+            route.response().end()
           }
         }
 
@@ -196,12 +199,12 @@ class MainVerticle : AbstractVerticle() {
                 route.response().end()
               }
               else -> {
-                route.response().statusCode = 404
+                route.response().statusCode = 401
                 route.response().end()
               }
             }
           } else {
-            route.response().statusCode = 404
+            route.response().statusCode = 401
             route.response().end()
           }
         }
@@ -297,10 +300,9 @@ class MainVerticle : AbstractVerticle() {
                 vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
 
                 println("AWARE Micro API at ${newServerConfig.getString("server_host")}:${newServerConfig.getInteger("server_port")}")
-                startPromise.complete()
+
               } else {
                 println("AWARE Micro initialisation failed! Because: ${server.cause()}")
-                startPromise.fail(server.cause());
               }
             }
         }
@@ -327,7 +329,7 @@ class MainVerticle : AbstractVerticle() {
 
         //study info
         val study = JsonObject()
-        study.put("study_key", "studyKey")
+        study.put("study_key", "4lph4num3ric")
         study.put("study_number", 1)
         study.put("study_name", "AWARE Micro demo study")
         study.put("study_active", true)
