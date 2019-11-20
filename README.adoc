@@ -1,41 +1,66 @@
-= Micro
+= AWARE Micro
 
-image:https://img.shields.io/badge/vert.x-3.8.1-purple.svg[link="https://vertx.io"]
+This is the new AWARE server for conducting studies using AWARE. It is a reactive, non-blocking server able to handle thousands of requests per second on a single machine.
 
-This application was generated using http://start.vertx.io
+This can be run on any OS as it is a JVM server implementation. This server is built using image:https://img.shields.io/badge/vert.x-3.8.1-purple.svg[link="https://vertx.io"]. It is compatible with the existing AWARE clients.
 
-== Building
-
-To launch your tests:
-```
-./gradlew clean test
-```
-
-To package your application:
-```
-./gradlew clean assemble
-```
-
-To run your application:
-```
-./gradlew clean run
-```
+#This is not compatible with the old dashboard located at api.awareframework.com. We are working on a new front-end to interface with AWARE Micro deployments.#
 
 == Deploying server
 
+The only dependency you need on your server is having Java (OpenJDK) installed.
+
+For Debian/Ubuntu:
 ```
 sudo apt install default-jdk
-git clone https://github.com/denzilferreira/aware-micro.git
-cd aware-micro
-./gradlew clean build run
-
 ```
 
-== Help
+For CentOS/Fedora:
+```
+sudo dnf install java-latest-openjdk-devel
+```
 
-* https://vertx.io/docs/[Vert.x Documentation]
-* https://stackoverflow.com/questions/tagged/vert.x?sort=newest&pageSize=15[Vert.x Stack Overflow]
-* https://groups.google.com/forum/?fromgroups#!forum/vertx[Vert.x User Group]
-* https://gitter.im/eclipse-vertx/vertx-users[Vert.x Gitter]
+Set the default Java compiler to the latest JDK and choose the JDK, not JRE.
+```
+sudo alternatives --config java
+```
 
+== Getting the server code
 
+Make sure you have Git installed on your server:
+
+For Debian/Ubuntu:
+```
+sudo apt install git
+```
+
+For CentOS/Fedora:
+```
+sudo dnf install git
+```
+
+Check out the latest source code of the server
+```
+git clone https://github.com/denzilferreira/aware-micro.git
+```
+
+== Running the server
+
+```
+cd aware-micro
+./gradlew clean build shadowJar
+```
+
+This will build and create .jar file in build/libs. Change to this directory and run the server for the first time:
+```
+cd build/libs
+java -jar micro-1.0.0-SNAPSHOT-fat.jar
+```
+This will create a file aware-config.json. Press CTRL+C to stop your server. You can edit this file to configure what database will be used and port, encryption and sensor & plugin settings for your study.
+
+== Deploy the study
+Once you are happy with the configuration, you can keep your server active by creating a screen and running the instance inside that screen.
+```
+screen
+java -jar micro-1.0.0-SNAPSHOT-fat.jar
+```
