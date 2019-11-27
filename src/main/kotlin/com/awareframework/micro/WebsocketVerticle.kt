@@ -12,6 +12,7 @@ import java.net.URL
 class WebsocketVerticle : AbstractVerticle() {
 
   private lateinit var parameters: JsonObject
+  private lateinit var websocket : ServerWebSocket
 
   override fun start(startPromise: Promise<Void>?) {
     super.start(startPromise)
@@ -41,8 +42,10 @@ class WebsocketVerticle : AbstractVerticle() {
               println("Websocket connection closed")
             }
             server.textMessageHandler { message ->
-              server.writeTextMessage(message)
+              websocket.writeTextMessage(message)
             }
+
+            websocket = server
           }
           .listen(serverConfig.getInteger("websocket_port")) {
             if (it.failed()) {
