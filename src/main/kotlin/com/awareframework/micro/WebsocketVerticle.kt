@@ -12,7 +12,6 @@ import java.net.URL
 class WebsocketVerticle : AbstractVerticle() {
 
   private lateinit var parameters: JsonObject
-  private lateinit var websocketServer : ServerWebSocket
 
   override fun start(startPromise: Promise<Void>?) {
     super.start(startPromise)
@@ -25,15 +24,6 @@ class WebsocketVerticle : AbstractVerticle() {
     val configRetrieverOptions = ConfigRetrieverOptions()
       .addStore(configStore)
       .setScanPeriod(5000)
-
-    val eventBus = vertx.eventBus()
-
-    eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
-      val postData = receivedMessage.body()
-      if(::websocketServer.isInitialized && !websocketServer.isClosed) {
-        websocketServer.writeTextMessage(postData.encode())
-      }
-    }
 
     val configReader = ConfigRetriever.create(vertx, configRetrieverOptions)
     configReader.getConfig { config ->
@@ -50,7 +40,9 @@ class WebsocketVerticle : AbstractVerticle() {
             server.closeHandler {
               println("Websocket connection closed")
             }
-            websocketServer = server
+            server.textMessageHandler { message ->
+              server.writeTextMessage(message)
+            }
           }
           .listen(serverConfig.getInteger("websocket_port")) {
             if (it.failed()) {
