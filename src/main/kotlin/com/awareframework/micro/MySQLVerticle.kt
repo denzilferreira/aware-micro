@@ -9,6 +9,7 @@ import io.vertx.core.impl.StringEscapeUtils
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.asyncsql.MySQLClient
+import io.vertx.ext.sql.ResultSet
 import io.vertx.ext.sql.SQLClient
 import java.util.stream.Collectors
 
@@ -49,12 +50,14 @@ class MySQLVerticle : AbstractVerticle() {
         sqlClient = MySQLClient.createShared(vertx, mysqlConfig)
 
         eventBus.consumer<String>("createTable") { receivedMessage ->
-          createTable(receivedMessage.body())
+          val table = receivedMessage.body()
+          createTable(table)
         }
 
         eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
           val postData = receivedMessage.body()
           insertData(
+            database = serverConfig.getString("database_name"),
             device_id = postData.getString("device_id"),
             table = postData.getString("table"),
             data = JsonArray(postData.getString("data"))
@@ -64,13 +67,38 @@ class MySQLVerticle : AbstractVerticle() {
     }
   }
 
+  /**
+   * Check if table exists in database, create it if not present
+   */
+  fun tableExists(database: String, table: String) {
+    sqlClient.getConnection {
+      if (it.succeeded()) {
+        val connection = it.result()
+        connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$database' and table_name='$table'") {
+          if (it.succeeded()) {
+            val resultSet = it.result()
+            if (resultSet.numRows == 0)  {
+              createTable(table)
+            }
+          }
+        }
+        connection.close()
+      } else {
+        println("Failed to establish connection to database: ${it.cause().message}")
+      }
+    }
+  }
+
+  /**
+   * Create table in the database if it doesn't exist
+   */
   fun createTable(table: String) {
     sqlClient.getConnection {
       if (it.succeeded()) {
         val connection = it.result()
         connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") {
           if (it.failed()) {
-            println("Failed to create table: ${it.cause().message}")
+            println("Table: $table failed to create. Error: ${it.cause().message}")
             connection.close()
           } else {
             println("Table: $table [OK]")
@@ -78,14 +106,21 @@ class MySQLVerticle : AbstractVerticle() {
           }
         }
       } else {
-        println("Failed to establish connection: ${it.cause().message}")
+        println("Failed to establish connection to database: ${it.cause().message}")
       }
     }
   }
 
-  fun insertData(device_id: String, table: String, data: JsonArray) {
+  /**
+   * Insert batch of data into database table
+   */
+  fun insertData(database: String, table: String, device_id: String, data: JsonArray) {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
+
+        //Check if table exists before inserting
+        tableExists(database, table)
+
         val connection = connectionResult.result()
         val rows = data.size()
         val values = ArrayList<String>()

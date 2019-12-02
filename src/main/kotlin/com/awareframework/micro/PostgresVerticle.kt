@@ -49,17 +49,41 @@ class PostgresVerticle : AbstractVerticle() {
         sqlClient = PostgreSQLClient.createShared(vertx, mysqlConfig)
 
         eventBus.consumer<String>("createTable") { receivedMessage ->
-          createTable(receivedMessage.body())
+          val table = receivedMessage.body()
+          createTable(table)
         }
 
         eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
           val postData = receivedMessage.body()
           insertData(
+            database = serverConfig.getString("database_name"),
             device_id = postData.getString("device_id"),
             table = postData.getString("table"),
             data = JsonArray(postData.getString("data"))
           )
         }
+      }
+    }
+  }
+
+  /**
+   * Check if table exists in database, create it if not present
+   */
+  fun tableExists(database: String, table: String) {
+    sqlClient.getConnection {
+      if (it.succeeded()) {
+        val connection = it.result()
+        connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$database' and table_name='$table'") {
+          if (it.succeeded()) {
+            val resultSet = it.result()
+            if (resultSet.numRows == 0)  {
+              createTable(table)
+            }
+          }
+        }
+        connection.close()
+      } else {
+        println("Failed to establish connection to database: ${it.cause().message}")
       }
     }
   }
@@ -83,9 +107,13 @@ class PostgresVerticle : AbstractVerticle() {
     }
   }
 
-  fun insertData(device_id: String, table: String, data: JsonArray) {
+  fun insertData(database: String, table: String, device_id: String, data: JsonArray) {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
+
+        //Check if table exists before inserting
+        tableExists(database, table)
+
         val connection = connectionResult.result()
         val rows = data.size()
         val values = ArrayList<String>()
