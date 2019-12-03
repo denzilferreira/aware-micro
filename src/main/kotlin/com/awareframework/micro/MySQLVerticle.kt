@@ -9,7 +9,6 @@ import io.vertx.core.impl.StringEscapeUtils
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.asyncsql.MySQLClient
-import io.vertx.ext.sql.ResultSet
 import io.vertx.ext.sql.SQLClient
 import java.util.stream.Collectors
 
@@ -63,6 +62,80 @@ class MySQLVerticle : AbstractVerticle() {
             data = JsonArray(postData.getString("data"))
           )
         }
+
+        eventBus.consumer<JsonObject>("updateData") { receivedMessage ->
+          val postData = receivedMessage.body()
+          updateData(
+            database = serverConfig.getString("database_name"),
+            device_id = postData.getString("device_id"),
+            table = postData.getString("table"),
+            data = JsonArray(postData.getString("data"))
+          )
+        }
+
+        eventBus.consumer<JsonObject>("deleteData") { receivedMessage ->
+          val postData = receivedMessage.body()
+          deleteData(
+            database = serverConfig.getString("database_name"),
+            device_id = postData.getString("device_id"),
+            table = postData.getString("table"),
+            data = JsonArray(postData.getString("data"))
+          )
+        }
+      }
+    }
+  }
+
+  fun updateData(database: String, device_id: String, table: String, data: JsonArray) {
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val connection = connectionResult.result()
+        for (i in 0 until data.size()) {
+          val entry = data.getJsonObject(i)
+          val updateItem =
+            "UPDATE '$table' SET data = $entry WHERE device_id = '$device_id' AND timestamp = ${entry.getDouble("timestamp")}"
+
+          connection.query(updateItem) { result ->
+            if (result.failed()) {
+              println("Failed to process update: ${result.cause().message}")
+              connection.close()
+            } else {
+              println("$device_id updated $table: ${entry.encode()}")
+              connection.close()
+            }
+          }
+        }
+      } else {
+        println("Failed to establish connection: ${connectionResult.cause().message}")
+      }
+    }
+  }
+
+  fun deleteData(database: String, device_id: String, table: String, data: JsonArray) {
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val connection = connectionResult.result()
+        val timestamps = mutableListOf<Double>()
+        for (i in 0 until data.size()) {
+          val entry = data.getJsonObject(i)
+          timestamps.plus(entry.getDouble("timestamp"))
+        }
+
+        val deleteBatch =
+          "DELETE from '$table' WHERE device_id = '$device_id' AND timestamp in (${timestamps.stream().map(Any::toString).collect(
+            Collectors.joining(",")
+          )})"
+        connection.query(deleteBatch) { result ->
+          if (result.failed()) {
+            println("Failed to process delete batch: ${result.cause().message}")
+            connection.close()
+          } else {
+            println("$device_id deleted from $table: ${data.size()} records")
+            connection.close()
+          }
+        }
+      } else {
+        println("Failed to establish connection: ${connectionResult.cause().message}")
       }
     }
   }
@@ -74,10 +147,11 @@ class MySQLVerticle : AbstractVerticle() {
     sqlClient.getConnection {
       if (it.succeeded()) {
         val connection = it.result()
-        connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$database' and table_name='$table'") {
-          if (it.succeeded()) {
-            val resultSet = it.result()
-            if (resultSet.numRows == 0)  {
+        connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$database' and table_name='$table'") { result ->
+          if (result.succeeded()) {
+            val resultSet = result.result()
+            if (resultSet.numRows == 0) {
+              println("Table: $table is being created")
               createTable(table)
             }
           }
@@ -93,9 +167,9 @@ class MySQLVerticle : AbstractVerticle() {
    * Create table in the database if it doesn't exist
    */
   fun createTable(table: String) {
-    sqlClient.getConnection {
-      if (it.succeeded()) {
-        val connection = it.result()
+    sqlClient.getConnection { result ->
+      if (result.succeeded()) {
+        val connection = result.result()
         connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") {
           if (it.failed()) {
             println("Table: $table failed to create. Error: ${it.cause().message}")
@@ -106,7 +180,7 @@ class MySQLVerticle : AbstractVerticle() {
           }
         }
       } else {
-        println("Failed to establish connection to database: ${it.cause().message}")
+        println("Failed to establish connection to database: ${result.cause().message}")
       }
     }
   }
@@ -137,7 +211,7 @@ class MySQLVerticle : AbstractVerticle() {
             println("Failed to process batch: ${result.cause().message}")
             connection.close()
           } else {
-            println("$device_id saved to $table: $rows records")
+            println("$device_id inserted to $table: $rows records")
             connection.close()
           }
         }

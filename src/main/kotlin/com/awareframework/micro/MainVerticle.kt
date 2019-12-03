@@ -199,17 +199,19 @@ class MainVerticle : AbstractVerticle() {
                 route.response().end()
               }
               "update" -> {
-                eventBus.publish("updateData",
+                eventBus.publish(
+                  "updateData",
                   JsonObject()
                     .put("table", route.request().getParam("table"))
                     .put("device_id", route.request().getFormAttribute("device_id"))
                     .put("data", route.request().getFormAttribute("data"))
-                  )
+                )
                 route.response().statusCode = 200
                 route.response().end()
               }
               "delete" -> {
-                eventBus.publish("deleteData",
+                eventBus.publish(
+                  "deleteData",
                   JsonObject()
                     .put("table", route.request().getParam("table"))
                     .put("device_id", route.request().getFormAttribute("device_id"))
@@ -291,7 +293,8 @@ class MainVerticle : AbstractVerticle() {
               "path_key_pem"
             ).isNotEmpty()
           ) {
-            newServerOptions.pemTrustOptions = PemTrustOptions().addCertPath(newServerConfig.getString("path_fullchain_pem"))
+            newServerOptions.pemTrustOptions =
+              PemTrustOptions().addCertPath(newServerConfig.getString("path_fullchain_pem"))
             newServerOptions.pemKeyCertOptions = PemKeyCertOptions()
               .setKeyPath(newServerConfig.getString("path_key_pem"))
               .setCertPath(newServerConfig.getString("path_cert_pem"))

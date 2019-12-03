@@ -62,6 +62,80 @@ class PostgresVerticle : AbstractVerticle() {
             data = JsonArray(postData.getString("data"))
           )
         }
+
+        eventBus.consumer<JsonObject>("updateData") { receivedMessage ->
+          val postData = receivedMessage.body()
+          updateData(
+            database = serverConfig.getString("database_name"),
+            device_id = postData.getString("device_id"),
+            table = postData.getString("table"),
+            data = JsonArray(postData.getString("data"))
+          )
+        }
+
+        eventBus.consumer<JsonObject>("deleteData") { receivedMessage ->
+          val postData = receivedMessage.body()
+          deleteData(
+            database = serverConfig.getString("database_name"),
+            device_id = postData.getString("device_id"),
+            table = postData.getString("table"),
+            data = JsonArray(postData.getString("data"))
+          )
+        }
+      }
+    }
+  }
+
+  fun updateData(database: String, device_id: String, table: String, data: JsonArray) {
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val connection = connectionResult.result()
+        for (i in 0 until data.size()) {
+          val entry = data.getJsonObject(i)
+          val updateItem =
+            "UPDATE '$table' SET data = $entry WHERE device_id = '$device_id' AND timestamp = ${entry.getDouble("timestamp")}"
+
+          connection.query(updateItem) { result ->
+            if (result.failed()) {
+              println("Failed to process update: ${result.cause().message}")
+              connection.close()
+            } else {
+              println("$device_id updated $table: ${entry.encode()}")
+              connection.close()
+            }
+          }
+        }
+      } else {
+        println("Failed to establish connection: ${connectionResult.cause().message}")
+      }
+    }
+  }
+
+  fun deleteData(database: String, device_id: String, table: String, data: JsonArray) {
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val connection = connectionResult.result()
+        val timestamps = mutableListOf<Double>()
+        for (i in 0 until data.size()) {
+          val entry = data.getJsonObject(i)
+          timestamps.plus(entry.getDouble("timestamp"))
+        }
+
+        val deleteBatch =
+          "DELETE from '$table' WHERE device_id = '$device_id' AND timestamp in (${timestamps.stream().map(Any::toString).collect(
+            Collectors.joining(",")
+          )})"
+        connection.query(deleteBatch) { result ->
+          if (result.failed()) {
+            println("Failed to process delete batch: ${result.cause().message}")
+            connection.close()
+          } else {
+            println("$device_id deleted from $table: ${data.size()} records")
+            connection.close()
+          }
+        }
+      } else {
+        println("Failed to establish connection: ${connectionResult.cause().message}")
       }
     }
   }
@@ -76,7 +150,7 @@ class PostgresVerticle : AbstractVerticle() {
         connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$database' and table_name='$table'") {
           if (it.succeeded()) {
             val resultSet = it.result()
-            if (resultSet.numRows == 0)  {
+            if (resultSet.numRows == 0) {
               createTable(table)
             }
           }
