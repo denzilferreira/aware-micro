@@ -7,6 +7,7 @@ import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.impl.StringEscapeUtils
+import io.vertx.core.json.Json
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.asyncsql.MySQLClient
@@ -93,23 +94,27 @@ class MySQLVerticle : AbstractVerticle() {
 
   //Fetch data from the database and return results as JsonArray
   fun getData(device_id: String, table: String, start: Double, end: Double): Future<JsonArray> {
-    val getDataFuture: Future<JsonArray> = Future.future { promise ->
-      sqlClient.getConnection { connectionResult ->
-        if (connectionResult.succeeded()) {
-          val connection = connectionResult.result()
-          connection.query("SELECT * FROM $table WHERE device_id = '$device_id' AND timestamp between $start AND $end ORDER BY timestamp ASC") { result ->
-            if (result.failed()) {
-              println("Failed to retrieve data: ${result.cause().message}")
-              connection.close()
-            } else {
-              println("$device_id : retrieved ${result.result().numRows} records from $table")
-              promise.complete(result.result().output)
-            }
+
+    val dataPromise: Promise<JsonArray> = Promise.promise()
+
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val connection = connectionResult.result()
+        connection.query("SELECT * FROM $table WHERE device_id = '$device_id' AND timestamp between $start AND $end ORDER BY timestamp ASC") { result ->
+          if (result.failed()) {
+            println("Failed to retrieve data: ${result.cause().message}")
+            connection.close()
+            dataPromise.fail(result.cause().message)
+          } else {
+            println("$device_id : retrieved ${result.result().numRows} records from $table")
+            connection.close()
+            dataPromise.complete(result.result().output)
           }
         }
       }
     }
-    return getDataFuture
+
+    return dataPromise.future()
   }
 
   fun updateData(device_id: String, table: String, data: JsonArray) {
@@ -169,49 +174,61 @@ class MySQLVerticle : AbstractVerticle() {
   /**
    * Check if table exists in database, create it if not present
    */
-  fun tableExists(table: String) : Future<Boolean> {
-    val tableExistsFuture : Future<Boolean> = Future.future { promise ->
-      val serverConfig = parameters.getJsonObject("server")
-      sqlClient.getConnection {
-        if (it.succeeded()) {
-          val connection = it.result()
-          connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${serverConfig.getString("database_name")}' and table_name='$table'") { result ->
-            if (result.succeeded()) {
-              val resultSet = result.result()
-              if (resultSet.numRows == 0) {
-                println("Table: $table is being created")
-                connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") {createResult ->
+  fun tableExists(table: String): Future<Boolean> {
+    val tableExistsFuture: Promise<Boolean> = Promise.promise()
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val serverConfig = parameters.getJsonObject("server")
+        val connection = connectionResult.result()
+        connection.query(
+          "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${serverConfig.getString(
+            "database_name"
+          )}' and table_name='$table'"
+        ) { result ->
+          if (result.succeeded()) {
+            if (result.result().numRows == 0) {
+              sqlClient.getConnection { connectionResult ->
+                val connect = connectionResult.result()
+                connect.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") { createResult ->
                   if (createResult.failed()) {
                     println("Table: $table failed to create. Error: ${createResult.cause().message}")
-                    connection.close()
-                    promise.fail(createResult.cause().message)
+                    tableExistsFuture.fail(createResult.cause().message)
                   } else {
-                    println("Table: $table [OK]")
-                    connection.close()
-                    promise.complete(true)
+                    println("Table: $table created")
+                    tableExistsFuture.complete(true)
                   }
                 }
+                connect.close()
               }
+            } else {
+              //already have the table, ready for insert
+              tableExistsFuture.complete(true)
             }
+          } else {
+            println("Failed to check if $table exists :(")
+            tableExistsFuture.fail(result.cause().message)
           }
-          connection.close()
-        } else {
-          println("Failed to establish connection to database: ${it.cause().message}")
         }
+        connection.close()
+      } else {
+        println("Failed to establish connection to database: ${connectionResult.cause().message}")
+        tableExistsFuture.fail(connectionResult.cause().message)
       }
     }
-    return tableExistsFuture
+    return tableExistsFuture.future()
   }
 
   /**
    * Insert batch of data into database table
    */
   fun insertData(table: String, device_id: String, data: JsonArray) {
-    sqlClient.getConnection { connectionResult ->
-      if (connectionResult.succeeded()) {
-        //Check if table exists before inserting
-        tableExists(table).setHandler { promise ->
-          if (promise.succeeded()) {
+    //Check if table exists before inserting
+    val checkTable = tableExists(table)
+    checkTable.setHandler { promise ->
+      if (promise.succeeded()) {
+        println("$device_id : $table [OK]")
+        sqlClient.getConnection { connectionResult ->
+          if (connectionResult.succeeded()) {
             val connection = connectionResult.result()
             val rows = data.size()
             val values = ArrayList<String>()
@@ -235,7 +252,7 @@ class MySQLVerticle : AbstractVerticle() {
           }
         }
       } else {
-        println("Failed to establish connection: ${connectionResult.cause().message}")
+        println("Failed to insert data: ${promise.cause().message}")
       }
     }
   }
