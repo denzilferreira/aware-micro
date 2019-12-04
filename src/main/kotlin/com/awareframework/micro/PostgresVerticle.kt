@@ -4,6 +4,7 @@ import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
+import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.impl.StringEscapeUtils
 import io.vertx.core.json.JsonArray
@@ -48,15 +49,9 @@ class PostgresVerticle : AbstractVerticle() {
 
         sqlClient = PostgreSQLClient.createShared(vertx, mysqlConfig)
 
-        eventBus.consumer<String>("createTable") { receivedMessage ->
-          val table = receivedMessage.body()
-          createTable(table)
-        }
-
         eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
           val postData = receivedMessage.body()
           insertData(
-            database = serverConfig.getString("database_name"),
             device_id = postData.getString("device_id"),
             table = postData.getString("table"),
             data = JsonArray(postData.getString("data"))
@@ -66,7 +61,6 @@ class PostgresVerticle : AbstractVerticle() {
         eventBus.consumer<JsonObject>("updateData") { receivedMessage ->
           val postData = receivedMessage.body()
           updateData(
-            database = serverConfig.getString("database_name"),
             device_id = postData.getString("device_id"),
             table = postData.getString("table"),
             data = JsonArray(postData.getString("data"))
@@ -76,17 +70,49 @@ class PostgresVerticle : AbstractVerticle() {
         eventBus.consumer<JsonObject>("deleteData") { receivedMessage ->
           val postData = receivedMessage.body()
           deleteData(
-            database = serverConfig.getString("database_name"),
             device_id = postData.getString("device_id"),
             table = postData.getString("table"),
             data = JsonArray(postData.getString("data"))
           )
         }
+
+        eventBus.consumer<JsonObject>("getData") { receivedMessage ->
+          val postData = receivedMessage.body()
+          getData(
+            device_id = postData.getString("device_id"),
+            table = postData.getString("table"),
+            start = postData.getDouble("start"),
+            end = postData.getDouble("end")
+          ).setHandler { response ->
+            receivedMessage.reply(response.result())
+          }
+        }
       }
     }
   }
 
-  fun updateData(database: String, device_id: String, table: String, data: JsonArray) {
+  //Fetch data from the database and return results as JsonArray
+  fun getData(device_id: String, table: String, start: Double, end: Double): Future<JsonArray> {
+    val getDataFuture: Future<JsonArray> = Future.future { promise ->
+      sqlClient.getConnection { connectionResult ->
+        if (connectionResult.succeeded()) {
+          val connection = connectionResult.result()
+          connection.query("SELECT * FROM $table WHERE device_id = '$device_id' AND timestamp between $start AND $end ORDER BY timestamp ASC") { result ->
+            if (result.failed()) {
+              println("Failed to retrieve data: ${result.cause().message}")
+              connection.close()
+            } else {
+              println("$device_id : retrieved ${result.result().numRows} records from $table")
+              promise.complete(result.result().output)
+            }
+          }
+        }
+      }
+    }
+    return getDataFuture
+  }
+
+  fun updateData(device_id: String, table: String, data: JsonArray) {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
         val connection = connectionResult.result()
@@ -111,7 +137,7 @@ class PostgresVerticle : AbstractVerticle() {
     }
   }
 
-  fun deleteData(database: String, device_id: String, table: String, data: JsonArray) {
+  fun deleteData(device_id: String, table: String, data: JsonArray) {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
         val connection = connectionResult.result()
@@ -143,74 +169,73 @@ class PostgresVerticle : AbstractVerticle() {
   /**
    * Check if table exists in database, create it if not present
    */
-  fun tableExists(database: String, table: String) {
-    sqlClient.getConnection {
-      if (it.succeeded()) {
-        val connection = it.result()
-        connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$database' and table_name='$table'") {
-          if (it.succeeded()) {
-            val resultSet = it.result()
-            if (resultSet.numRows == 0) {
-              createTable(table)
+  fun tableExists(table: String) : Future<Boolean> {
+    val tableExistsFuture : Future<Boolean> = Future.future { promise ->
+      val serverConfig = parameters.getJsonObject("server")
+      sqlClient.getConnection {
+        if (it.succeeded()) {
+          val connection = it.result()
+          connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${serverConfig.getString("database_name")}' and table_name='$table'") { result ->
+            if (result.succeeded()) {
+              val resultSet = result.result()
+              if (resultSet.numRows == 0) {
+                println("Table: $table is being created")
+                connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") {createResult ->
+                  if (createResult.failed()) {
+                    println("Table: $table failed to create. Error: ${createResult.cause().message}")
+                    connection.close()
+                    promise.fail(createResult.cause().message)
+                  } else {
+                    println("Table: $table [OK]")
+                    connection.close()
+                    promise.complete(true)
+                  }
+                }
+              }
+            }
+          }
+          connection.close()
+        } else {
+          println("Failed to establish connection to database: ${it.cause().message}")
+        }
+      }
+    }
+    return tableExistsFuture
+  }
+
+  /**
+   * Insert batch of data into database table
+   */
+  fun insertData(table: String, device_id: String, data: JsonArray) {
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        //Check if table exists before inserting
+        tableExists(table).setHandler { promise ->
+          if (promise.succeeded()) {
+            val connection = connectionResult.result()
+            val rows = data.size()
+            val values = ArrayList<String>()
+            for (i in 0 until data.size()) {
+              val entry = data.getJsonObject(i)
+              values.add("('$device_id', '${entry.getDouble("timestamp")}', '${StringEscapeUtils.escapeJavaScript(entry.encode())}')")
+            }
+            val insertBatch =
+              "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(
+                Collectors.joining(",")
+              )}"
+            connection.query(insertBatch) { result ->
+              if (result.failed()) {
+                println("Failed to process batch: ${result.cause().message}")
+                connection.close()
+              } else {
+                println("$device_id inserted to $table: $rows records")
+                connection.close()
+              }
             }
           }
         }
-        connection.close()
       } else {
-        println("Failed to establish connection to database: ${it.cause().message}")
-      }
-    }
-  }
-
-  fun createTable(table: String) {
-    sqlClient.getConnection {
-      if (it.succeeded()) {
-        val connection = it.result()
-        connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") {
-          if (it.failed()) {
-            println("Failed to create table: ${it.cause().message}")
-            connection.close()
-          } else {
-            println("Table: $table [OK]")
-            connection.close()
-          }
-        }
-      } else {
-        println("Failed to establish connection to PostgreSQL: ${it.cause().message}")
-      }
-    }
-  }
-
-  fun insertData(database: String, table: String, device_id: String, data: JsonArray) {
-    sqlClient.getConnection { connectionResult ->
-      if (connectionResult.succeeded()) {
-
-        //Check if table exists before inserting
-        tableExists(database, table)
-
-        val connection = connectionResult.result()
-        val rows = data.size()
-        val values = ArrayList<String>()
-        for (i in 0 until data.size()) {
-          val entry = data.getJsonObject(i)
-          values.add("('$device_id', '${entry.getDouble("timestamp")}', '${StringEscapeUtils.escapeJavaScript(entry.encode())}')")
-        }
-        val insertBatch =
-          "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(
-            Collectors.joining(",")
-          )}"
-        connection.query(insertBatch) { result ->
-          if (result.failed()) {
-            println("Failed to process batch: ${result.cause().message}")
-            connection.close()
-          } else {
-            println("$device_id saved to $table: $rows records")
-            connection.close()
-          }
-        }
-
-      } else {
-        println("Failed to establish connection to PostgreSQL: ${connectionResult.cause().message}")
+        println("Failed to establish connection: ${connectionResult.cause().message}")
       }
     }
   }

@@ -38,9 +38,11 @@ class WebsocketVerticle : AbstractVerticle() {
             server.handler {
               println("Websocket connected")
             }
+
             server.closeHandler {
               println("Websocket connection closed")
             }
+
             server.textMessageHandler { message ->
               websocket.writeTextMessage(message)
             }

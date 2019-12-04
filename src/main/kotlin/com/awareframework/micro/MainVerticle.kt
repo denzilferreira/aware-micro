@@ -183,7 +183,7 @@ class MainVerticle : AbstractVerticle() {
           ) {
             when (route.request().getParam("operation")) {
               "create_table" -> {
-                eventBus.publish("createTable", route.request().getParam("table"))
+                //eventBus.publish("createTable", route.request().getParam("table")) //merging with insert. Only here so that client thinks all is ok
                 route.response().statusCode = 200
                 route.response().end()
               }
@@ -219,6 +219,23 @@ class MainVerticle : AbstractVerticle() {
                 )
                 route.response().statusCode = 200
                 route.response().end()
+              }
+              "query" -> {
+                val requestData = JsonObject()
+                  .put("table", route.request().getParam("table"))
+                  .put("device_id", route.request().getFormAttribute("device_id"))
+                  .put("start", route.request().getFormAttribute("start"))
+                  .put("end", route.request().getFormAttribute("end"))
+
+                eventBus.request<JsonArray>("getData", requestData) { response ->
+                  if (response.succeeded()) {
+                    route.response().statusCode = 200
+                    route.response().end(response.result().body().encode())
+                  } else {
+                    route.response().statusCode = 401
+                    route.response().end()
+                  }
+                }
               }
               else -> {
                 route.response().statusCode = 401
