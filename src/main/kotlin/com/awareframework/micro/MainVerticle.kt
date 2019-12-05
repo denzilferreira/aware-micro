@@ -262,14 +262,11 @@ class MainVerticle : AbstractVerticle() {
         }
 
         //Use SSL
-        if (serverConfig.getString("path_cert_pem").isNotEmpty() && serverConfig.getString("path_fullchain_pem").isNotEmpty() && serverConfig.getString(
-            "path_key_pem"
-          ).isNotEmpty()
-        ) {
+        if (serverConfig.getString("path_fullchain_pem").isNotEmpty() && serverConfig.getString("path_key_pem").isNotEmpty()) {
           serverOptions.pemTrustOptions = PemTrustOptions().addCertPath(serverConfig.getString("path_fullchain_pem"))
           serverOptions.pemKeyCertOptions = PemKeyCertOptions()
+            .setCertPath(serverConfig.getString("path_fullchain_pem"))
             .setKeyPath(serverConfig.getString("path_key_pem"))
-            .setCertPath(serverConfig.getString("path_cert_pem"))
           serverOptions.isSsl = true
         }
 
@@ -306,15 +303,13 @@ class MainVerticle : AbstractVerticle() {
           val newServerConfig = newConfig.getJsonObject("server")
           val newServerOptions = HttpServerOptions()
 
-          if (newServerConfig.getString("path_cert_pem").isNotEmpty() && newServerConfig.getString("path_fullchain_pem").isNotEmpty() && newServerConfig.getString(
-              "path_key_pem"
-            ).isNotEmpty()
-          ) {
+          if (newServerConfig.getString("path_fullchain_pem").isNotEmpty() && newServerConfig.getString("path_key_pem").isNotEmpty()) {
             newServerOptions.pemTrustOptions =
               PemTrustOptions().addCertPath(newServerConfig.getString("path_fullchain_pem"))
+
             newServerOptions.pemKeyCertOptions = PemKeyCertOptions()
+              .setCertPath(newServerConfig.getString("path_fullchain_pem"))
               .setKeyPath(newServerConfig.getString("path_key_pem"))
-              .setCertPath(newServerConfig.getString("path_cert_pem"))
             newServerOptions.isSsl = true
           }
 
@@ -363,7 +358,6 @@ class MainVerticle : AbstractVerticle() {
         server.put("server_port", 8080)
         server.put("websocket_port", 8081)
         server.put("path_fullchain_pem", "")
-        server.put("path_cert_pem", "")
         server.put("path_key_pem", "")
         configFile.put("server", server)
 
@@ -562,36 +556,43 @@ class MainVerticle : AbstractVerticle() {
     val icon = drawableId.substring(drawableId.indexOf('/') + 1)
     val downloadUrl = "/denzilferreira/aware-client/raw/master/aware-core/src/main/res/drawable/*.png"
 
-    vertx.fileSystem().mkdir("./cache") { result ->
-      if (result.succeeded()) {
+    vertx.fileSystem().mkdir("./cache") { cacheFolder ->
+      if (cacheFolder.succeeded()) {
         println("Created cache folder")
       }
     }
 
-    vertx.fileSystem()
-      .open("./cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
-        if (writeFile.succeeded()) {
-          val asyncFile = writeFile.result()
-          val webClientOptions = WebClientOptions()
-            .setKeepAlive(true)
-            .setPipelining(true)
-            .setFollowRedirects(true)
-            .setSsl(true)
-            .setTrustAll(true)
+    vertx.fileSystem().exists("./cache/$icon.png") { iconResult ->
+      if (!iconResult.result()) {
+        vertx.fileSystem().open("./cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
+          if (writeFile.succeeded()) {
 
-          val client = WebClient.create(vertx, webClientOptions)
-          client.get(443, "github.com", downloadUrl.replace("*", icon))
-            .`as`(BodyCodec.pipe(asyncFile, true))
-            .send { request ->
-              if (request.succeeded()) {
-                val iconFile = request.result()
-                println("Cached $icon.png: ${iconFile.statusCode() == 200}")
+            println("Downloading $icon.png")
+
+            val asyncFile = writeFile.result()
+            val webClientOptions = WebClientOptions()
+              .setKeepAlive(true)
+              .setPipelining(true)
+              .setFollowRedirects(true)
+              .setSsl(true)
+              .setTrustAll(true)
+
+            val client = WebClient.create(vertx, webClientOptions)
+            client.get(443, "github.com", downloadUrl.replace("*", icon))
+              .`as`(BodyCodec.pipe(asyncFile, true))
+              .send { request ->
+                if (request.succeeded()) {
+                  val iconFile = request.result()
+                  println("Cached $icon.png: ${iconFile.statusCode() == 200}")
+                }
               }
-            }
-        } else {
-          println("Unable to create file: ${writeFile.cause()}")
+          } else {
+            println("Unable to create file: ${writeFile.cause()}")
+          }
         }
       }
+    }
+
     return "$icon.png"
   }
 
