@@ -167,51 +167,37 @@ class PostgresVerticle : AbstractVerticle() {
   }
 
   /**
-   * Check if table exists in database, create it if not present
+   * Create a database table if it doesn't exist
    */
-  fun tableExists(table: String) : Future<Boolean> {
-    val tableExistsFuture : Future<Boolean> = Future.future { promise ->
-      val serverConfig = parameters.getJsonObject("server")
-      sqlClient.getConnection {
-        if (it.succeeded()) {
-          val connection = it.result()
-          connection.query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${serverConfig.getString("database_name")}' and table_name='$table'") { result ->
-            if (result.succeeded()) {
-              val resultSet = result.result()
-              if (resultSet.numRows == 0) {
-                println("Table: $table is being created")
-                connection.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") {createResult ->
-                  if (createResult.failed()) {
-                    println("Table: $table failed to create. Error: ${createResult.cause().message}")
-                    connection.close()
-                    promise.fail(createResult.cause().message)
-                  } else {
-                    println("Table: $table [OK]")
-                    connection.close()
-                    promise.complete(true)
-                  }
-                }
-              }
-            }
+  fun createTable(table: String): Future<Boolean> {
+    val promise = Promise.promise<Boolean>()
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val connect = connectionResult.result()
+        connect.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") { createResult ->
+          if (createResult.failed()) {
+            promise.fail(createResult.cause().message)
+            connect.close()
+          } else {
+            promise.complete(true)
+            connect.close()
           }
-          connection.close()
-        } else {
-          println("Failed to establish connection to database: ${it.cause().message}")
         }
+      } else {
+        promise.fail(connectionResult.cause().message)
       }
     }
-    return tableExistsFuture
+    return promise.future()
   }
 
   /**
    * Insert batch of data into database table
    */
   fun insertData(table: String, device_id: String, data: JsonArray) {
-    sqlClient.getConnection { connectionResult ->
-      if (connectionResult.succeeded()) {
-        //Check if table exists before inserting
-        tableExists(table).setHandler { promise ->
-          if (promise.succeeded()) {
+    createTable(table).setHandler { creation ->
+      if (creation.succeeded()) {
+        sqlClient.getConnection { connectionResult ->
+          if (connectionResult.succeeded()) {
             val connection = connectionResult.result()
             val rows = data.size()
             val values = ArrayList<String>()
@@ -235,7 +221,7 @@ class PostgresVerticle : AbstractVerticle() {
           }
         }
       } else {
-        println("Failed to establish connection: ${connectionResult.cause().message}")
+        println(creation.cause().message)
       }
     }
   }

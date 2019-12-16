@@ -183,7 +183,8 @@ class MainVerticle : AbstractVerticle() {
           ) {
             when (route.request().getParam("operation")) {
               "create_table" -> {
-                //eventBus.publish("createTable", route.request().getParam("table")) //merging with insert. Only here so that client thinks all is ok
+                //Commented the following line as we merged with insert. Only here so that legacy client thinks all is ok
+                //eventBus.publish("createTable", route.request().getParam("table"))
                 route.response().statusCode = 200
                 route.response().end()
               }

@@ -172,39 +172,9 @@ class MySQLVerticle : AbstractVerticle() {
   }
 
   /**
-   * Check if table exists in database
-   */
-  fun tableExists(table: String) : Future<Boolean> {
-    val promise = Promise.promise<Boolean>()
-    sqlClient.getConnection { connectionResult ->
-      if (connectionResult.succeeded()) {
-        val serverConfig = parameters.getJsonObject("server")
-        val connection = connectionResult.result()
-        connection.query(
-          "SELECT COUNT(*) as tableOk FROM information_schema.tables WHERE table_schema = '${serverConfig.getString(
-            "database_name"
-          )}' and table_name='$table'"
-        ) { result ->
-          if (result.succeeded()) {
-            if (result.result().rows[0].getInteger("tableOk") != 0) {
-              promise.complete(true)
-            }
-          } else {
-            promise.fail(result.cause().message)
-          }
-        }
-        connection.close()
-      } else {
-        promise.fail(connectionResult.cause().message)
-      }
-    }
-    return promise.future()
-  }
-
-  /**
    * Create a database table if it doesn't exist
    */
-  fun createTable(table : String) : Future<Boolean> {
+  fun createTable(table: String): Future<Boolean> {
     val promise = Promise.promise<Boolean>()
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
@@ -212,11 +182,12 @@ class MySQLVerticle : AbstractVerticle() {
         connect.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") { createResult ->
           if (createResult.failed()) {
             promise.fail(createResult.cause().message)
+            connect.close()
           } else {
             promise.complete(true)
+            connect.close()
           }
         }
-        connect.close()
       } else {
         promise.fail(connectionResult.cause().message)
       }
@@ -228,8 +199,8 @@ class MySQLVerticle : AbstractVerticle() {
    * Insert batch of data into database table
    */
   fun insertData(table: String, device_id: String, data: JsonArray) {
-    tableExists(table).setHandler { exists ->
-      if (exists.succeeded()) {
+    createTable(table).setHandler { creation ->
+      if (creation.succeeded()) {
         sqlClient.getConnection { connectionResult ->
           if (connectionResult.succeeded()) {
             val connection = connectionResult.result()
@@ -255,34 +226,7 @@ class MySQLVerticle : AbstractVerticle() {
           }
         }
       } else {
-        createTable(table).setHandler { created ->
-          if (created.succeeded()) {
-            sqlClient.getConnection { connectionResult ->
-              if (connectionResult.succeeded()) {
-                val connection = connectionResult.result()
-                val rows = data.size()
-                val values = ArrayList<String>()
-                for (i in 0 until data.size()) {
-                  val entry = data.getJsonObject(i)
-                  values.add("('$device_id', '${entry.getDouble("timestamp")}', '${StringEscapeUtils.escapeJavaScript(entry.encode())}')")
-                }
-                val insertBatch =
-                  "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(
-                    Collectors.joining(",")
-                  )}"
-                connection.query(insertBatch) { result ->
-                  if (result.failed()) {
-                    println("Failed to process batch: ${result.cause().message}")
-                    connection.close()
-                  } else {
-                    println("$device_id inserted to $table: $rows records")
-                    connection.close()
-                  }
-                }
-              }
-            }
-          }
-        }
+        println(creation.cause().message)
       }
     }
   }
