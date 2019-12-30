@@ -107,13 +107,17 @@ class InfluxDbVerticle : AbstractVerticle() {
                        .tag("device_label", device_label)
 
       entry.forEach { (key, value) ->
-        when (value) {
-           is String -> point.addField(key, value)
-           is Int -> point.addField(key, value)
-           is Double -> point.addField(key, value)
-           is Long -> point.addField(key, value)
-           is Float -> point.addField(key, value)
-           else -> println("Unknown Type")
+        if( table === "locations_visit" && key === "name") {
+          print("Not storing location name");
+        } else {
+          when (value) {
+            is String -> point.addField(key, value)
+            is Int -> point.addField(key, value)
+            is Double -> point.addField(key, value)
+            is Long -> point.addField(key, value)
+            is Float -> point.addField(key, value)
+            else -> println("Unknown Type")
+          }
         }
       }
 
