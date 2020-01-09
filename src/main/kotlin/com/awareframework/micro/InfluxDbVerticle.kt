@@ -131,7 +131,6 @@ class InfluxDbVerticle : AbstractVerticle() {
       batchPoints.point(point.build());
     }
 
-    println("Processed ${data.size()} points")
 
     influxDB.write(batchPoints)
   }
