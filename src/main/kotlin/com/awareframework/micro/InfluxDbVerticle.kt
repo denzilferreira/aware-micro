@@ -25,6 +25,7 @@ class InfluxDbVerticle : AbstractVerticle() {
   private lateinit var batchPoints: BatchPoints
   private lateinit var query: Query
   private lateinit var queryResults: QueryResult
+  private lateinit var device_label: String
 
   override fun start(startPromise: Promise<Void>?) {
     super.start(startPromise)
@@ -93,7 +94,10 @@ class InfluxDbVerticle : AbstractVerticle() {
     // Query for device_label by device_id
     query = Query("SELECT label FROM aware_device WHERE device_id = '$device_id'", "awaredb")
     queryResults = influxDB.query(query)
-    var device_label = queryResults.getResults().get(0).getSeries().get(0).getValues().get(0).get(1).toString()
+    println(queryResults.getResults().get(0).getSeries())
+    if(queryResults.getResults().get(0).getSeries() != null) {
+      device_label = queryResults.getResults().get(0).getSeries().get(0).getValues().get(0).get(1).toString()
+    }
 
 
     batchPoints = BatchPoints.database("awaredb").build()
@@ -102,9 +106,12 @@ class InfluxDbVerticle : AbstractVerticle() {
       val entry = data.getJsonObject(i)
 
       var point = Point.measurement(table)
-                       .time(entry.getLong("timestamp"), TimeUnit.MILLISECONDS)
-                       .tag("device_id", device_id)
-                       .tag("device_label", device_label)
+                         .time(entry.getLong("timestamp"), TimeUnit.MILLISECONDS)
+                         .tag("device_id", device_id)
+
+      if(queryResults.getResults().get(0).getSeries() != null) {
+        point.tag("device_label", device_label)
+      } 
 
       entry.forEach { (key, value) ->
         if( table === "locations_visit" && key === "name") {
@@ -123,6 +130,8 @@ class InfluxDbVerticle : AbstractVerticle() {
 
       batchPoints.point(point.build());
     }
+
+    println("Processed ${data.size()} points")
 
     influxDB.write(batchPoints)
   }
