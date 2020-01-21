@@ -27,6 +27,7 @@ class InfluxDbVerticle : AbstractVerticle() {
   private lateinit var queryResults: QueryResult
   private lateinit var device_label: String
 
+
   override fun start(startPromise: Promise<Void>?) {
     super.start(startPromise)
 
@@ -87,6 +88,16 @@ class InfluxDbVerticle : AbstractVerticle() {
   }
 
   fun insertData(device_id: String, table: String, data: JsonArray) {
+    val integerList = arrayOf(
+      "call_duration", 
+      "double_altitude",
+      "accuracy",
+      "is_silent",
+      "bt_rssi",
+      "call_type",
+      "screen_status"
+      )
+
     val rows = data.size()
 
     println("Processing insert data")
@@ -123,7 +134,7 @@ class InfluxDbVerticle : AbstractVerticle() {
               point.addField(key + "_string", value)
             }
             is Int -> {
-              if(key === "call_duration" || key === "double_altitude") {
+              if(key in integerList){  
                   point.addField(key + "_integer", value)
                 } else {
                   point.addField(key, value)
