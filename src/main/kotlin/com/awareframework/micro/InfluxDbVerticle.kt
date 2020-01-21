@@ -142,10 +142,18 @@ class InfluxDbVerticle : AbstractVerticle() {
                 }
             }
             is Double -> {
-              point.addField(key, value)
+              if(key === "double_decibels") {
+                  point.addField(key + "_float", value)
+                } else {
+                  point.addField(key, value)
+                }
             }
             is Long -> {
-              point.addField(key, value)
+              if(key === "double_decibels") {
+                  point.addField(key + "_float", value)
+                } else {
+                  point.addField(key, value)
+                }
             }
             is Float -> {
               if(key === "double_decibels") {
