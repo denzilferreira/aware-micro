@@ -110,6 +110,7 @@ class InfluxDbVerticle : AbstractVerticle() {
                          .tag("device_id", device_id)
 
       if(queryResults.getResults().get(0).getSeries() != null) {
+
         point.tag("device_label", device_label)
       } 
 
@@ -118,11 +119,29 @@ class InfluxDbVerticle : AbstractVerticle() {
           print("Not storing location name");
         } else {
           when (value) {
-            is String -> point.addField(key, value)
-            is Int -> point.addField(key, value)
-            is Double -> point.addField(key, value)
-            is Long -> point.addField(key, value)
-            is Float -> point.addField(key, value)
+            is String -> {
+              point.addField(key + "_string", value)
+            }
+            is Int -> {
+              if(key === "call_duration" || key === "double_altitude") {
+                  point.addField(key + "_integer", value)
+                } else {
+                  point.addField(key, value)
+                }
+            }
+            is Double -> {
+              point.addField(key + "_double", value)
+            }
+            is Long -> {
+              point.addField(key + "_long", value)
+            }
+            is Float -> {
+              if(key === "double_decibels") {
+                  point.addField(key + "_float", value)
+                } else {
+                  point.addField(key, value)
+                }
+            }
             else -> println("Unknown Type")
           }
         }
