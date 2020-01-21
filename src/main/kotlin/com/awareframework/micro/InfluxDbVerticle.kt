@@ -126,12 +126,13 @@ class InfluxDbVerticle : AbstractVerticle() {
       } 
 
       entry.forEach { (key, value) ->
+
         if( table === "locations_visit" && key === "name") {
-          print("Not storing location name");
+          println("Not storing location name");
         } else {
           when (value) {
             is String -> {
-              point.addField(key + "_string", value)
+              point.addField(key, value)
             }
             is Int -> {
               if(key in integerList){  
@@ -141,10 +142,10 @@ class InfluxDbVerticle : AbstractVerticle() {
                 }
             }
             is Double -> {
-              point.addField(key + "_double", value)
+              point.addField(key, value)
             }
             is Long -> {
-              point.addField(key + "_long", value)
+              point.addField(key, value)
             }
             is Float -> {
               if(key === "double_decibels") {
