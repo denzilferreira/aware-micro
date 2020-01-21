@@ -164,6 +164,7 @@ class InfluxDbVerticle : AbstractVerticle() {
 
 
     influxDB.write(batchPoints)
+    println("$device_id saved to $table: $rows records")
   }
 
   override fun stop() {
