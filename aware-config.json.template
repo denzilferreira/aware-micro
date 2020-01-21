@@ -632,7 +632,7 @@
     "settings" : [ {
       "setting" : "status_plugin_ambient_noise",
       "title" : "Active",
-      "defaultValue" : "true",
+      "defaultValue" : "false",
       "summary" : "Detects silent from noisy surroundings."
     }, {
       "setting" : "frequency_plugin_ambient_noise",
