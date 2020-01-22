@@ -96,7 +96,8 @@ class InfluxDbVerticle : AbstractVerticle() {
       "bt_rssi",
       "call_type",
       "screen_status",
-      "double_bearing"
+      "double_bearing",
+      "double_speed"
       )
 
     val rows = data.size()
