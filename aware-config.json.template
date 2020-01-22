@@ -131,7 +131,7 @@
     "settings" : [ {
       "setting" : "status_bluetooth",
       "title" : "Activate",
-      "defaultValue" : "true"
+      "defaultValue" : "false"
     }, {
       "setting" : "frequency_bluetooth",
       "title" : "Scanning update frequency",
