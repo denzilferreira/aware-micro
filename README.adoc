@@ -51,7 +51,7 @@ Check out the latest source code of the server
 git clone https://github.com/denzilferreira/aware-micro.git
 ```
 
-=== Running the server with support for runtime study configuration changes ===
+== Running the server with support for runtime study configuration changes
 
 ```
 cd aware-micro
@@ -60,7 +60,7 @@ cd aware-micro
 
 The first time you run this, it will cache the settings from the client and all the plugins into an *aware-config.json*. Once you stop seeing cached messages, you can stop the server using CTRL+C. You can edit this file to configure the database, SSL certificates, ports, and sensor & plugin settings for your study.
 
-== Deploy the study (dynamic configuration) ==
+=== Deploy the study (dynamic configuration)
 Once you are happy with the configuration, you can keep your server active by creating a screen and running the instance inside that screen.
 ```
 screen
@@ -68,7 +68,7 @@ screen
 ```
 If you open a new terminal and edit the aware-config.json file, the changes are applied immediately on the server. The clients will retrieve the new configuration after 15 minutes.
 
-=== Running the server that won't change study configuration half-way ===
+== Running the server that won't change study configuration half-way
 
 ```
 cd aware-micro
@@ -82,9 +82,26 @@ java -jar micro-1.0.0-SNAPSHOT-fat.jar
 ```
 This will create a file aware-config.json. Press CTRL+C to stop your server. You can edit this file to configure what database will be used and port, encryption and sensor & plugin settings for your study.
 
-== Deploy the study (static configuration)
+=== Deploy the study (static configuration)
 Once you are happy with the configuration, you can keep your server active by creating a screen and running the instance inside that screen.
 ```
 screen
 java -jar micro-1.0.0-SNAPSHOT-fat.jar
 ```
+== Securing your server with LetsEncrypt
+Depending on the OS you have, follow the instructions from: https://certbot.eff.org/. 
+
+In the question: My HTTP website is running <Software, choose None of the above> on <System, pick your OS> and follow the instructions to get fullchain.pem and privkey.pem files for your domain. Once you have these two files, set the following permissions so that Gradle can read them and use them on your server:
+
+```
+chmod 770 PATH_TO/fullchain.pem
+chmod 770 PATH_TO/privkey.pem
+```
+
+You can now edit *aware-config.json* to point to these two files by setting the variables:
+
+```
+path_fullchain_pem = "PATH_TO/fullchain.pem"
+path_key_pem = "PATH_TO/privkey.pem"
+```
+Update the server_host to have https:// in the URL and start your server. If you open your URL, the connection will be encrypted.
