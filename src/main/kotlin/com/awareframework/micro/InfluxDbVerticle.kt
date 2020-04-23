@@ -118,6 +118,8 @@ class InfluxDbVerticle : AbstractVerticle() {
     for (i in 0 until data.size()) {
       val entry = data.getJsonObject(i)
 
+      println(entry)
+
       var point = Point.measurement(table)
                          .time(entry.getLong("timestamp"), TimeUnit.MILLISECONDS)
                          .tag("device_id", device_id)
