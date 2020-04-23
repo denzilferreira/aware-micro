@@ -100,6 +100,8 @@ class InfluxDbVerticle : AbstractVerticle() {
       "double_speed"
       )
 
+
+
     val rows = data.size()
 
     println("Processing insert data")
@@ -137,12 +139,14 @@ class InfluxDbVerticle : AbstractVerticle() {
           when (value) {
             is String -> {
               point.addField(key, value)
+              point.addField(key + "_string", value)
             }
             is Int -> {
               if(key in integerList){  
                   point.addField(key + "_integer", value)
                 } else {
                   point.addField(key, value)
+                  point.addField(key + "_integer", value)
                 }
             }
             is Double -> {
@@ -150,6 +154,7 @@ class InfluxDbVerticle : AbstractVerticle() {
                   point.addField(key + "_float", value)
                 } else {
                   point.addField(key, value)
+                  point.addField(key + "_float", value)
                 }
             }
             is Long -> {
@@ -157,6 +162,7 @@ class InfluxDbVerticle : AbstractVerticle() {
                   point.addField(key + "_float", value)
                 } else {
                   point.addField(key, value)
+                  point.addField(key + "_float", value)
                 }
             }
             is Float -> {
@@ -164,6 +170,7 @@ class InfluxDbVerticle : AbstractVerticle() {
                   point.addField(key + "_float", value)
                 } else {
                   point.addField(key, value)
+                  point.addField(key + "_float", value)
                 }
             }
             else -> println("Unknown Type")
