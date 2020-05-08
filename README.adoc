@@ -107,9 +107,9 @@ path_key_pem = "PATH_TO/privkey.pem"
 Update the server_host to have https:// in the URL and start your server. If you open your URL, the connection will be encrypted.
 
 == Deply your server with Docker
-[Docker](https://docs.docker.com/get-docker/) is a platform for developing, shipping, and running applications. By using Docker, you can quickly deploy your server to AWS, GCP, and Azure. 
+https://docs.docker.com/get-docker/[Docker] is a platform for developing, shipping, and running applications. By using Docker, you can quickly deploy your server to AWS, GCP, and Azure. 
 
-Please set up Docker into your environment first. You can see how to set Docker on each environment [here]( https://docs.docker.com/get-docker/).
+Please set up Docker into your environment first. You can see how to set Docker on each environment  https://docs.docker.com/get-docker/[here].
 
 1. For making a container of your server, you need to prepare `aware-config.json` and `micro-1.0.0-SNAPSHOT-fat.jar` at a same directory. 
 
@@ -149,4 +149,4 @@ docker build -t aware/micro .
 docker run -i -t -p 8080:8080 aware/micro
 ```
 
-Please modify the port number with your environment. You can get more information about running Vert.x on Docker [here](https://vertx.io/docs/vertx-docker/).
+Please modify the port number with your environment. You can get more information about running Vert.x on Docker https://vertx.io/docs/vertx-docker/[here].
