@@ -106,8 +106,8 @@ path_key_pem = "PATH_TO/privkey.pem"
 ```
 Update the server_host to have https:// in the URL and start your server. If you open your URL, the connection will be encrypted.
 
-== Deply your server with Docker
-https://docs.docker.com/get-docker/[Docker] is a platform for developing, shipping, and running applications. By using Docker, you can quickly deploy your server to AWS, GCP, and Azure. 
+== Deploy your AWARE Micro server with Docker
+https://docs.docker.com/get-docker/[Docker] is a platform for developing, shipping, and running applications. By using Docker, you can quickly deploy your server to AWS, GCP, and Azure and scale up. Once you have your study configured locally on your machine, you can ship the configuration and compiled server to a Docker instance.
 
 Please set up Docker into your environment first. You can see how to set Docker on each environment  https://docs.docker.com/get-docker/[here].
 
