@@ -105,3 +105,48 @@ path_fullchain_pem = "PATH_TO/fullchain.pem"
 path_key_pem = "PATH_TO/privkey.pem"
 ```
 Update the server_host to have https:// in the URL and start your server. If you open your URL, the connection will be encrypted.
+
+== Deply your server with Docker
+[Docker](https://docs.docker.com/get-docker/) is a platform for developing, shipping, and running applications. By using Docker, you can quickly deploy your server to AWS, GCP, and Azure. 
+
+Please set up Docker into your environment first. You can see how to set Docker on each environment [here]( https://docs.docker.com/get-docker/).
+
+1. For making a container of your server, you need to prepare `aware-config.json` and `micro-1.0.0-SNAPSHOT-fat.jar` at a same directory. 
+
+2. At the same directory, please make a `Dockerfile` like below. 
+
+```
+FROM openjdk:11
+
+# Set the location of the verticles
+ENV VERTICLE_HOME /usr/verticles
+
+# Set the name of the verticle to deploy
+ENV VERTICLE_AWARE_JAR micro-1.0.0-SNAPSHOT-fat.jar
+ENV VERTICLE_AWARE_CONFIG aware-config.json
+
+EXPOSE 8080
+
+# Set vertx option
+ENV VERTX_OPTIONS ""
+
+# Copy your verticle and configuration to the container
+COPY $VERTICLE_AWARE_JAR $VERTICLE_HOME/
+COPY $VERTICLE_AWARE_CONFIG $VERTICLE_HOME/
+
+WORKDIR $VERTICLE_HOME
+ENTRYPOINT ["sh", "-c"]
+CMD ["exec java -jar $VERTICLE_AWARE_JAR"]
+```
+
+3. You can build the container and make an image of the server by the following command:
+```
+docker build -t aware/micro .
+```
+
+4. For running the server image, you can use the `docker run` command.
+```
+docker run -i -t -p 8080:8080 aware/micro
+```
+
+Please modify the port number with your environment. You can get more information about running Vert.x on Docker [here](https://vertx.io/docs/vertx-docker/).
