@@ -6,18 +6,22 @@ This can be run on any OS as it is a JVM server implementation. This server is b
 
 #This is not compatible with the old dashboard located at api.awareframework.com. We are working on a new front-end to interface with AWARE Micro deployments.#
 
+== Keep in mind the following troubleshooting:
+- Check the firewall open ports if you can't reach your aware-micro http://host:8080 address on your browser. You need port 8080 open.
+- Your MySQL configuration can't use root as a user. The root user is special and only allows local connections and root privileges to connect to MySQL. JVM doesn't run with root permissions so this won't work. Create a new user, with all permissions on the study-specific database.
+
 == Deploying server
 
-The only dependency you need on your server is having Java (OpenJDK) installed.
+The only dependency you need on your server is having Java (OpenJDK 11) installed.
 
 For Debian/Ubuntu:
 ```
-sudo apt install default-jdk
+sudo apt install openjdk-11-jdk
 ```
 
 For CentOS/Fedora:
 ```
-sudo dnf install java-latest-openjdk-devel
+sudo dnf install java-11-openjdk-devel
 ```
 
 Set the default Java compiler to the latest JDK and choose the JDK, not JRE.
@@ -58,7 +62,7 @@ cd aware-micro
 ./gradlew clean build run
 ```
 
-The first time you run this, it will cache the settings from the client and all the plugins into an *aware-config.json*. Once you stop seeing cached messages, you can stop the server using CTRL+C. You can edit this file to configure the database, SSL certificates, ports, and sensor & plugin settings for your study.
+The first time you run this, it will cache the settings from the client and all the plugins into an *aware-config.json*. Once you stop seeing cached messages, you can stop the server using CTRL+C. You can edit the aware-config.json file to configure the database, SSL certificates, ports, and sensor & plugin settings for your study.
 
 === Deploy the study (dynamic configuration)
 Once you are happy with the configuration, you can keep your server active by creating a screen and running the instance inside that screen.
