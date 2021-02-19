@@ -133,8 +133,8 @@ class InfluxDbVerticle : AbstractVerticle() {
 
       entry.forEach { (key, value) ->
 
-        if( table === "locations_visit" && key === "name") {
-          println("Not storing location name");
+        if((table === "locations_visit" && key === "name") || (table == "accelerometer")) {
+          println("Not storing this.");
         } else {
           when (value) {
             is String -> {
