@@ -14,7 +14,7 @@ repositories {
 
 ext {
   kotlinVersion = '1.5.31'
-  vertxVersion = '3.8.4'
+  vertxVersion = '4.3.3'
 }
 
 application {
@@ -27,11 +27,13 @@ def watchForChange = 'src/main/kotlin/**/*'
 def doOnChange = './gradlew classes'
 
 dependencies {
+  implementation "commons-lang:commons-lang:2.6"
   implementation "io.vertx:vertx-config:$vertxVersion"
   implementation "io.vertx:vertx-health-check:$vertxVersion"
   implementation "io.vertx:vertx-web:$vertxVersion"
   implementation "io.vertx:vertx-web-client:$vertxVersion"
-  implementation "io.vertx:vertx-mysql-postgresql-client:$vertxVersion"
+  implementation "io.vertx:vertx-mysql-client:$vertxVersion"
+  implementation "io.vertx:vertx-pg-client:$vertxVersion"
   implementation "io.vertx:vertx-hazelcast:$vertxVersion"
   implementation "io.vertx:vertx-auth-oauth2:$vertxVersion"
   implementation "io.vertx:vertx-tcp-eventbus-bridge:$vertxVersion"

@@ -1,22 +1,28 @@
 package com.awareframework.micro
 
+import org.apache.commons.lang.StringEscapeUtils
 import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
 import io.vertx.core.Promise
-import io.vertx.core.impl.StringEscapeUtils
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
-import io.vertx.ext.asyncsql.PostgreSQLClient
-import io.vertx.ext.sql.SQLClient
+import io.vertx.core.net.PemKeyCertOptions
+import io.vertx.core.net.PemTrustOptions
+import io.vertx.pgclient.PgConnectOptions
+import io.vertx.pgclient.PgPool
+import io.vertx.pgclient.SslMode
+import io.vertx.sqlclient.PoolOptions
+import io.vertx.sqlclient.SqlClient
 import java.util.stream.Collectors
+import java.util.stream.StreamSupport
 
 class PostgresVerticle : AbstractVerticle() {
 
   private lateinit var parameters: JsonObject
-  private lateinit var sqlClient: SQLClient
+  private lateinit var sqlClient: PgPool
 
   override fun start(startPromise: Promise<Void>?) {
     super.start(startPromise)
@@ -38,16 +44,19 @@ class PostgresVerticle : AbstractVerticle() {
         parameters = config.result()
         val serverConfig = parameters.getJsonObject("server")
 
-        val mysqlConfig = JsonObject()
-          .put("host", serverConfig.getString("database_host"))
-          .put("port", serverConfig.getInteger("database_port"))
-          .put("database", serverConfig.getString("database_name"))
-          .put("username", serverConfig.getString("database_user"))
-          .put("password", serverConfig.getString("database_pwd"))
-          .put("sslMode", "prefer")
-          .put("sslRootCert", serverConfig.getString("path_fullchain_pem"))
+        // https://vertx.io/docs/4.3.3/apidocs/io/vertx/pgclient/PgConnectOptions.html
+        val connectOptions = PgConnectOptions()
+          .setHost(serverConfig.getString("database_host"))
+          .setPort(serverConfig.getInteger("database_port"))
+          .setDatabase(serverConfig.getString("database_name"))
+          .setUser(serverConfig.getString("database_user"))
+          .setPassword(serverConfig.getString("database_pwd"))
+        setDatabaseSslMode(serverConfig, connectOptions)
 
-        sqlClient = PostgreSQLClient.createShared(vertx, mysqlConfig)
+        val poolOptions = PoolOptions().setMaxSize(5)
+
+        // Create the client pool
+        sqlClient = PgPool.pool(vertx, connectOptions, poolOptions)
 
         eventBus.consumer<JsonObject>("insertData") { receivedMessage ->
           val postData = receivedMessage.body()
@@ -83,7 +92,8 @@ class PostgresVerticle : AbstractVerticle() {
             table = postData.getString("table"),
             start = postData.getDouble("start"),
             end = postData.getDouble("end")
-          ).setHandler { response ->
+          // https://access.redhat.com/documentation/ja-jp/red_hat_build_of_eclipse_vert.x/4.0/html/eclipse_vert.x_4.0_migration_guide/changes-in-handlers_changes-in-common-components
+          ).onComplete { response ->
             receivedMessage.reply(response.result())
           }
         }
@@ -93,23 +103,32 @@ class PostgresVerticle : AbstractVerticle() {
 
   //Fetch data from the database and return results as JsonArray
   fun getData(device_id: String, table: String, start: Double, end: Double): Future<JsonArray> {
-    val getDataFuture: Future<JsonArray> = Future.future { promise ->
-      sqlClient.getConnection { connectionResult ->
-        if (connectionResult.succeeded()) {
-          val connection = connectionResult.result()
-          connection.query("SELECT * FROM $table WHERE device_id = '$device_id' AND timestamp between $start AND $end ORDER BY timestamp ASC") { result ->
-            if (result.failed()) {
-              println("Failed to retrieve data: ${result.cause().message}")
-              connection.close()
-            } else {
-              println("$device_id : retrieved ${result.result().numRows} records from $table")
-              promise.complete(result.result().output)
-            }
+
+    val dataPromise: Promise<JsonArray> = Promise.promise()
+
+    sqlClient.getConnection { connectionResult ->
+      if (connectionResult.succeeded()) {
+        val connection = connectionResult.result()
+        // https://access.redhat.com/documentation/ja-jp/red_hat_build_of_eclipse_vert.x/4.0/html/eclipse_vert.x_4.0_migration_guide/changes-in-vertx-jdbc-client_changes-in-client-components#running_queries_on_managed_connections
+        connection
+          .query("SELECT * FROM $table WHERE device_id = '$device_id' AND timestamp between $start AND $end ORDER BY timestamp ASC")
+          .execute()
+          .onFailure { e ->
+            println("Failed to retrieve data: ${e.message}")
+            connection.close()
+            dataPromise.fail(e.message)
           }
-        }
+          .onSuccess { rows ->
+            println("$device_id : retrieved ${rows.size()} records from $table")
+            connection.close()
+            dataPromise.complete(JsonArray(StreamSupport.stream(rows.spliterator(), false)
+              .map { row -> row.toJson() }
+              .collect(Collectors.toList())))
+          }
       }
     }
-    return getDataFuture
+
+    return dataPromise.future()
   }
 
   fun updateData(device_id: String, table: String, data: JsonArray) {
@@ -121,15 +140,17 @@ class PostgresVerticle : AbstractVerticle() {
           val updateItem =
             "UPDATE '$table' SET data = $entry WHERE device_id = '$device_id' AND timestamp = ${entry.getDouble("timestamp")}"
 
-          connection.query(updateItem) { result ->
-            if (result.failed()) {
-              println("Failed to process update: ${result.cause().message}")
+          // https://access.redhat.com/documentation/ja-jp/red_hat_build_of_eclipse_vert.x/4.0/html/eclipse_vert.x_4.0_migration_guide/changes-in-vertx-jdbc-client_changes-in-client-components#running_queries_on_managed_connections
+          connection.query(updateItem)
+            .execute()
+            .onFailure { e ->
+              println("Failed to process update: ${e.message}")
               connection.close()
-            } else {
+            }
+            .onSuccess { _ ->
               println("$device_id updated $table: ${entry.encode()}")
               connection.close()
             }
-          }
         }
       } else {
         println("Failed to establish connection: ${connectionResult.cause().message}")
@@ -151,15 +172,16 @@ class PostgresVerticle : AbstractVerticle() {
           "DELETE from '$table' WHERE device_id = '$device_id' AND timestamp in (${timestamps.stream().map(Any::toString).collect(
             Collectors.joining(",")
           )})"
-        connection.query(deleteBatch) { result ->
-          if (result.failed()) {
-            println("Failed to process delete batch: ${result.cause().message}")
+        connection.query(deleteBatch)
+          .execute()
+          .onFailure { e ->
+            println("Failed to process delete batch: ${e.message}")
             connection.close()
-          } else {
+          }
+          .onSuccess { _ ->
             println("$device_id deleted from $table: ${data.size()} records")
             connection.close()
           }
-        }
       } else {
         println("Failed to establish connection: ${connectionResult.cause().message}")
       }
@@ -174,15 +196,16 @@ class PostgresVerticle : AbstractVerticle() {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
         val connect = connectionResult.result()
-        connect.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))") { createResult ->
-          if (createResult.failed()) {
-            promise.fail(createResult.cause().message)
+        connect.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))")
+          .execute()
+          .onFailure { e ->
+            promise.fail(e.message)
             connect.close()
-          } else {
+          }
+          .onSuccess { _ ->
             promise.complete(true)
             connect.close()
           }
-        }
       } else {
         promise.fail(connectionResult.cause().message)
       }
@@ -194,8 +217,8 @@ class PostgresVerticle : AbstractVerticle() {
    * Insert batch of data into database table
    */
   fun insertData(table: String, device_id: String, data: JsonArray) {
-    createTable(table).setHandler { creation ->
-      if (creation.succeeded()) {
+    createTable(table)
+      .onSuccess { _ ->
         sqlClient.getConnection { connectionResult ->
           if (connectionResult.succeeded()) {
             val connection = connectionResult.result()
@@ -203,32 +226,51 @@ class PostgresVerticle : AbstractVerticle() {
             val values = ArrayList<String>()
             for (i in 0 until data.size()) {
               val entry = data.getJsonObject(i)
+
+              // https://github.com/eclipse-vertx/vert.x/commit/ea0eddb129530ab3719c0ef86b471894876ec519#diff-07f061e092a63da24a06ab4507d15125e3377034f21eee18c6d4261f6714e709L241
               values.add("('$device_id', '${entry.getDouble("timestamp")}', '${StringEscapeUtils.escapeJavaScript(entry.encode())}')")
             }
             val insertBatch =
               "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(
                 Collectors.joining(",")
               )}"
-            connection.query(insertBatch) { result ->
-              if (result.failed()) {
-                println("Failed to process batch: ${result.cause().message}")
+            connection.query(insertBatch)
+              .execute()
+              .onFailure { e ->
+                println("Failed to process batch: ${e.message}")
                 connection.close()
-              } else {
+              }
+              .onSuccess { _ ->
                 println("$device_id inserted to $table: $rows records")
                 connection.close()
               }
-            }
           }
         }
-      } else {
-        println(creation.cause().message)
       }
-    }
+      .onFailure { e ->
+        println(e.message)
+      }
   }
 
   override fun stop() {
     super.stop()
     println("AWARE Micro: PostgreSQL client shutdown")
     sqlClient.close()
+  }
+
+  private fun setDatabaseSslMode(serverConfig: JsonObject, options: PgConnectOptions) {
+    val sslMode = serverConfig.getString("database_ssl_mode")
+    when (sslMode) {
+      null, "", "disable", "disabled" -> {
+        options.setSslMode(SslMode.DISABLE)
+      }
+      "prefer", "preferred" -> {
+        options.setSslMode(SslMode.PREFER)
+        options.setPemTrustOptions(PemTrustOptions().addCertPath(serverConfig.getString("database_ssl_path_ca_cert_pem")))
+        options.setPemKeyCertOptions(PemKeyCertOptions()
+          .setKeyPath(serverConfig.getString("database_ssl_path_client_key_pem"))
+          .setCertPath(serverConfig.getString("database_ssl_path_client_cert_pem")))
+      }
+    }
   }
 }
