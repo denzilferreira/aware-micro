@@ -26,7 +26,7 @@ def watchForChange = 'src/main/kotlin/**/*'
 def doOnChange = './gradlew classes'
 
 dependencies {
-  implementation "commons-lang:commons-lang:2.6"
+  implementation "commons-lang:commons-lang:2.6"  // Required for StringEscapeUtils
   implementation "io.vertx:vertx-config:$vertxVersion"
   implementation "io.vertx:vertx-health-check:$vertxVersion"
   implementation "io.vertx:vertx-web:$vertxVersion"
