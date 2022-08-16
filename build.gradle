@@ -11,6 +11,11 @@ repositories {
   mavenCentral()
 }
 
+configurations {
+  compileClasspath.resolutionStrategy.activateDependencyLocking()
+  runtimeClasspath.resolutionStrategy.activateDependencyLocking()
+}
+
 ext {
   kotlinVersion = '1.5.31'
   vertxVersion = '4.3.3'
