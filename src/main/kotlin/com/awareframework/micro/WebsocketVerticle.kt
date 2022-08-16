@@ -49,14 +49,28 @@ class WebsocketVerticle : AbstractVerticle() {
 
             websocket = server
           }
-          .listen(serverConfig.getInteger("websocket_port")) {
+          .listen(getExternalWebSocketServerPort(serverConfig)) {
             if (it.failed()) {
               println("Failed to initialise websocket server ${it.cause().message}")
             } else {
-              println("AWARE Micro Websocket server: ws://${URL(serverConfig.getString("server_host")).host}:${serverConfig.getInteger("websocket_port")}")
+              println("AWARE Micro Websocket server: ws://${getExternalWebSocketServerHost(serverConfig)}:${getExternalWebSocketServerPort(serverConfig)}")
             }
           }
       }
     }
+  }
+
+  private fun getExternalWebSocketServerHost(serverConfig: JsonObject): String {
+    if (serverConfig.containsKey("external_server_host")) {
+      return URL(serverConfig.getString("external_server_host")).host
+    }
+    return URL(serverConfig.getString("server_host")).host
+  }
+
+  private fun getExternalWebSocketServerPort(serverConfig: JsonObject): Int {
+    if (serverConfig.containsKey("external_websocket_port")) {
+      return serverConfig.getInteger("external_websocket_port")
+    }
+    return serverConfig.getInteger("websocket_port")
   }
 }
