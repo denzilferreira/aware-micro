@@ -64,6 +64,8 @@ class MainVerticle : AbstractVerticle() {
         val serverConfig = parameters.getJsonObject("server")
         val study = parameters.getJsonObject("study")
 
+        // HttpServerOptions.host is the host to listen on. So using |server_host|, not |external_server_host| here.
+        // See also: https://vertx.io/docs/4.3.3/apidocs/io/vertx/core/net/NetServerOptions.html#DEFAULT_HOST
         serverOptions.host = serverConfig.getString("server_host")
 
         /**
@@ -94,7 +96,7 @@ class MainVerticle : AbstractVerticle() {
 
                 val client = WebClient.create(vertx, webClientOptions)
                 val serverURL =
-                  "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+                  "${getExternalServerHost(serverConfig)}:${getExternalServerPort(serverConfig)}/index.php/${study.getInteger(
                     "study_number"
                   )}/${study.getString("study_key")}"
 
@@ -254,9 +256,7 @@ class MainVerticle : AbstractVerticle() {
          */
         router.route(HttpMethod.GET, "/").handler { route ->
           route.response().putHeader("content-type", "text/html").end(
-            "Hello from AWARE Micro!<br/>Join study: <a href=\"${serverConfig.getString("server_host")}:${serverConfig.getInteger(
-              "server_port"
-            )}/${study.getInteger(
+            "Hello from AWARE Micro!<br/>Join study: <a href=\"${getExternalServerHost(serverConfig)}:${getExternalServerPort(serverConfig)}/${study.getInteger(
               "study_number"
             )}/${study.getString("study_key")}\">HERE</a>"
           )
@@ -289,7 +289,7 @@ class MainVerticle : AbstractVerticle() {
 
               vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
 
-              println("AWARE Micro API at ${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}")
+              println("AWARE Micro API at ${getExternalServerHost(serverConfig)}:${getExternalServerPort(serverConfig)}")
               startPromise.complete()
             } else {
               println("AWARE Micro initialisation failed! Because: ${server.cause()}")
@@ -335,7 +335,7 @@ class MainVerticle : AbstractVerticle() {
                 vertx.undeploy("com.awareframework.micro.WebsocketVerticle")
                 vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
 
-                println("AWARE Micro API at ${newServerConfig.getString("server_host")}:${newServerConfig.getInteger("server_port")}")
+                println("AWARE Micro API at ${getExternalServerHost(newServerConfig)}:${getExternalServerPort(newServerConfig)}")
 
               } else {
                 println("AWARE Micro initialisation failed! Because: ${server.cause()}")
@@ -452,7 +452,7 @@ class MainVerticle : AbstractVerticle() {
           "status_webservice" -> awareSetting.put("value", "true")
           "webservice_server" -> awareSetting.put(
             "value",
-            "${serverConfig.getString("server_host")}:${serverConfig.getInteger("server_port")}/index.php/${study.getInteger(
+            "${getExternalServerHost(serverConfig)}:${getExternalServerPort(serverConfig)}/index.php/${study.getInteger(
               "study_number"
             )}/${study.getString("study_key")}"
           )
@@ -656,5 +656,19 @@ class MainVerticle : AbstractVerticle() {
   private fun getSchedulers(): JsonArray {
     val schedulers = JsonArray()
     return schedulers
+  }
+
+  private fun getExternalServerHost(serverConfig: JsonObject): String {
+    if (serverConfig.containsKey("external_server_host")) {
+      return serverConfig.getString("external_server_host")
+    }
+    return serverConfig.getString("server_host")
+  }
+
+  private fun getExternalServerPort(serverConfig: JsonObject): Int {
+    if (serverConfig.containsKey("external_server_port")) {
+      return serverConfig.getInteger("external_server_port")
+    }
+    return serverConfig.getInteger("server_port")
   }
 }
