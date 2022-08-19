@@ -47,6 +47,10 @@ dependencies {
   implementation "io.vertx:vertx-web-templ-pebble:$vertxVersion"
   implementation "org.slf4j:slf4j-nop:1.7.25"
   implementation "io.vertx:vertx-core:$vertxVersion"
+
+  testImplementation "io.vertx:vertx-junit5:$vertxVersion"
+  testImplementation "org.junit.jupiter:junit-jupiter-api:5.8.2"
+  testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.8.2"
 }
 
 compileKotlin {
@@ -71,7 +75,13 @@ shadowJar {
 test {
   useJUnitPlatform()
   testLogging {
-    events 'PASSED', 'FAILED', 'SKIPPED'
+    events 'PASSED', 'FAILED', 'SKIPPED', 'standardOut', 'standardError'
+    exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    showCauses = true
+    showExceptions = true
+    showStackTraces = true
+    showStandardStreams = true
+    outputs.upToDateWhen { false }
   }
 }
 
