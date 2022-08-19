@@ -1,0 +1,14 @@
+<configuration>
+  <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS Z} [%level] (%thread\) %logger - %m%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- DEBUG logs by Netty are noisy. -->
+  <logger name="io.netty" level="INFO"/>
+
+  <root level="${logLevel:-INFO}">
+    <appender-ref ref="console"/>
+  </root>
+</configuration>
