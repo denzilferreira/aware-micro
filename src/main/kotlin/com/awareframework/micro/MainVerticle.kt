@@ -36,7 +36,7 @@ class MainVerticle : AbstractVerticle() {
     println("AWARE Micro initializing...")
 
     val serverOptions = HttpServerOptions()
-    val pebbleEngine = PebbleTemplateEngine.create(PebbleEngine.Builder().cacheActive(false).build())
+    val pebbleEngine = PebbleTemplateEngine.create(vertx, PebbleEngine.Builder().cacheActive(false).build())
     val eventBus = vertx.eventBus()
 
     val router = Router.router(vertx)

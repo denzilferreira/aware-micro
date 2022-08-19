@@ -33,8 +33,9 @@ class WebsocketVerticle : AbstractVerticle() {
 
         val serverConfig = parameters.getJsonObject("server")
 
+        // https://access.redhat.com/documentation/ja-jp/red_hat_build_of_eclipse_vert.x/4.0/html/eclipse_vert.x_4.0_migration_guide/changes-in-http_changes-in-common-components#updates_in_http_methods_for_literal_websocket_literal
         vertx.createHttpServer()
-          .websocketHandler { server ->
+          .webSocketHandler { server ->
             server.handler {
               println("Websocket connected")
             }
