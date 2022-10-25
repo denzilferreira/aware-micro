@@ -166,7 +166,7 @@ class MySQLVerticle : AbstractVerticle() {
         val timestamps = mutableListOf<Double>()
         for (i in 0 until data.size()) {
           val entry = data.getJsonObject(i)
-          timestamps.plus(entry.getDouble("timestamp"))
+          timestamps.add(entry.getDouble("timestamp"))
         }
 
         val deleteBatch =
