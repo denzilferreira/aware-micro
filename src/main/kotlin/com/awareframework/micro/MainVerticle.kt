@@ -227,8 +227,8 @@ class MainVerticle : AbstractVerticle() {
                 val requestData = JsonObject()
                   .put("table", route.request().getParam("table"))
                   .put("device_id", route.request().getFormAttribute("device_id"))
-                  .put("start", route.request().getFormAttribute("start"))
-                  .put("end", route.request().getFormAttribute("end"))
+                  .put("start", route.request().getFormAttribute("start").toDouble())
+                  .put("end", route.request().getFormAttribute("end").toDouble())
 
                 eventBus.request<JsonArray>("getData", requestData) { response ->
                   if (response.succeeded()) {
