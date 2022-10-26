@@ -111,7 +111,7 @@ class PostgresVerticle : AbstractVerticle() {
         val connection = connectionResult.result()
         // https://access.redhat.com/documentation/ja-jp/red_hat_build_of_eclipse_vert.x/4.0/html/eclipse_vert.x_4.0_migration_guide/changes-in-vertx-jdbc-client_changes-in-client-components#running_queries_on_managed_connections
         connection
-          .query("SELECT * FROM $table WHERE device_id = '$device_id' AND timestamp between $start AND $end ORDER BY timestamp ASC")
+          .query("SELECT * FROM \"$table\" WHERE \"device_id\" = '$device_id' AND \"timestamp\" between $start AND $end ORDER BY \"timestamp\" ASC")
           .execute()
           .onFailure { e ->
             println("Failed to retrieve data: ${e.message}")
@@ -138,7 +138,7 @@ class PostgresVerticle : AbstractVerticle() {
         for (i in 0 until data.size()) {
           val entry = data.getJsonObject(i)
           val updateItem =
-            "UPDATE '$table' SET data = $entry WHERE device_id = '$device_id' AND timestamp = ${entry.getDouble("timestamp")}"
+            "UPDATE \"$table\" SET \"data\" = '$entry' WHERE \"device_id\" = '$device_id' AND \"timestamp\" = ${entry.getDouble("timestamp")}"
 
           // https://access.redhat.com/documentation/ja-jp/red_hat_build_of_eclipse_vert.x/4.0/html/eclipse_vert.x_4.0_migration_guide/changes-in-vertx-jdbc-client_changes-in-client-components#running_queries_on_managed_connections
           connection.query(updateItem)
@@ -169,7 +169,7 @@ class PostgresVerticle : AbstractVerticle() {
         }
 
         val deleteBatch =
-          "DELETE from '$table' WHERE device_id = '$device_id' AND timestamp in (${timestamps.stream().map(Any::toString).collect(
+          "DELETE FROM \"$table\" WHERE \"device_id\" = '$device_id' AND \"timestamp\" in (${timestamps.stream().map(Any::toString).collect(
             Collectors.joining(",")
           )})"
         connection.query(deleteBatch)
@@ -196,15 +196,23 @@ class PostgresVerticle : AbstractVerticle() {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
         val connect = connectionResult.result()
-        connect.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))")
+        connect.query("CREATE TABLE IF NOT EXISTS \"$table\" (\"_id\" SERIAL PRIMARY KEY, \"timestamp\" DOUBLE PRECISION NOT NULL, \"device_id\" UUID NOT NULL, \"data\" JSONB NOT NULL)")
           .execute()
           .onFailure { e ->
             promise.fail(e.message)
             connect.close()
           }
           .onSuccess { _ ->
-            promise.complete(true)
-            connect.close()
+            connect.query("CREATE INDEX IF NOT EXISTS \"${table}_timestamp_device\" ON \"$table\" (\"timestamp\", \"device_id\")")
+              .execute()
+              .onFailure { e2 ->
+                promise.fail(e2.message)
+                connect.close()
+              }
+              .onSuccess { _ ->
+                promise.complete(true)
+                connect.close()
+              }
           }
       } else {
         promise.fail(connectionResult.cause().message)
@@ -228,10 +236,10 @@ class PostgresVerticle : AbstractVerticle() {
               val entry = data.getJsonObject(i)
 
               // https://github.com/eclipse-vertx/vert.x/commit/ea0eddb129530ab3719c0ef86b471894876ec519#diff-07f061e092a63da24a06ab4507d15125e3377034f21eee18c6d4261f6714e709L241
-              values.add("('$device_id', '${entry.getDouble("timestamp")}', '${StringEscapeUtils.escapeJavaScript(entry.encode())}')")
+              values.add("('$device_id', '${entry.getDouble("timestamp")}', '${entry.encode()}')")
             }
             val insertBatch =
-              "INSERT INTO `$table` (`device_id`,`timestamp`,`data`) VALUES ${values.stream().map(Any::toString).collect(
+              "INSERT INTO \"$table\" (\"device_id\",\"timestamp\",\"data\") VALUES ${values.stream().map(Any::toString).collect(
                 Collectors.joining(",")
               )}"
             connection.query(insertBatch)
