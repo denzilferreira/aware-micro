@@ -64,6 +64,11 @@ compileTestKotlin {
   kotlinOptions.jvmTarget = '11'
 }
 
+jar {
+  metaInf {
+    from rootProject.file("LICENSE")
+  }
+}
 
 shadowJar {
   classifier = 'fat'
@@ -72,6 +77,9 @@ shadowJar {
   }
   mergeServiceFiles {
     include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
+  }
+  metaInf {
+    from rootProject.file("LICENSE")
   }
 }
 
