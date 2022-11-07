@@ -1,6 +1,6 @@
 plugins {
-  id 'org.jetbrains.kotlin.jvm' version '1.5.31'
   id 'application'
+  id 'org.jetbrains.kotlin.jvm' version '1.7.20'  // Kotlin version
   id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
@@ -16,42 +16,40 @@ configurations {
   runtimeClasspath.resolutionStrategy.activateDependencyLocking()
 }
 
-ext {
-  kotlinVersion = '1.5.31'
-  vertxVersion = '4.3.3'
-}
-
 application {
   mainClassName = 'io.vertx.core.Launcher'
   applicationDefaultJvmArgs = ['-DlogLevel=INFO']
 }
-
 
 def mainVerticleName = 'com.awareframework.micro.MainVerticle'
 def watchForChange = 'src/main/kotlin/**/*'
 def doOnChange = './gradlew classes'
 
 dependencies {
-  implementation "commons-lang:commons-lang:2.6"  // Required for StringEscapeUtils
-  implementation "io.vertx:vertx-config:$vertxVersion"
-  implementation "io.vertx:vertx-health-check:$vertxVersion"
-  implementation "io.vertx:vertx-web:$vertxVersion"
-  implementation "io.vertx:vertx-web-client:$vertxVersion"
-  implementation "io.vertx:vertx-mysql-client:$vertxVersion"
-  implementation "io.vertx:vertx-pg-client:$vertxVersion"
-  implementation "io.vertx:vertx-hazelcast:$vertxVersion"
-  implementation "io.vertx:vertx-auth-oauth2:$vertxVersion"
-  implementation "io.vertx:vertx-tcp-eventbus-bridge:$vertxVersion"
-  implementation "io.vertx:vertx-sockjs-service-proxy:$vertxVersion"
-  implementation "io.vertx:vertx-lang-kotlin:$vertxVersion"
-  implementation "io.vertx:vertx-mqtt:$vertxVersion"
-  implementation "io.vertx:vertx-web-templ-pebble:$vertxVersion"
-  implementation "org.slf4j:slf4j-api:1.7.36"
-  implementation "ch.qos.logback:logback-classic:1.2.11"
-  implementation "ch.qos.logback:logback-core:1.2.11"
-  implementation "io.vertx:vertx-core:$vertxVersion"
+  implementation platform("io.vertx:vertx-stack-depchain:4.3.4")  // Vert.x version
 
-  testImplementation "io.vertx:vertx-junit5:$vertxVersion"
+  implementation "io.vertx:vertx-core"
+  implementation "io.vertx:vertx-config"
+  implementation "io.vertx:vertx-health-check"
+  implementation "io.vertx:vertx-web"
+  implementation "io.vertx:vertx-web-client"
+  implementation "io.vertx:vertx-mysql-client"
+  implementation "io.vertx:vertx-pg-client"
+  implementation "io.vertx:vertx-hazelcast"
+  implementation "io.vertx:vertx-auth-oauth2"
+  implementation "io.vertx:vertx-tcp-eventbus-bridge"
+  implementation "io.vertx:vertx-sockjs-service-proxy"
+  implementation "io.vertx:vertx-lang-kotlin"
+  implementation "io.vertx:vertx-mqtt"
+  implementation "io.vertx:vertx-web-templ-pebble"
+
+  implementation "org.slf4j:slf4j-api:2.0.3"
+  implementation "ch.qos.logback:logback-classic:1.4.4"
+  implementation "ch.qos.logback:logback-core:1.4.4"
+
+  implementation "commons-lang:commons-lang:2.6"  // Required for StringEscapeUtils
+
+  testImplementation "io.vertx:vertx-junit5"
   testImplementation "org.junit.jupiter:junit-jupiter-api:5.8.2"
   testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.8.2"
 }
