@@ -43,6 +43,9 @@ dependencies {
   implementation "io.vertx:vertx-mqtt"
   implementation "io.vertx:vertx-web-templ-pebble"
 
+  // For SCRAM-SHA-256 passwords in PostgreSQL.
+  implementation "com.ongres.scram:common:2.1"
+
   implementation "org.slf4j:slf4j-api:2.0.3"
   implementation "ch.qos.logback:logback-classic:1.4.4"
   implementation "ch.qos.logback:logback-core:1.4.4"
