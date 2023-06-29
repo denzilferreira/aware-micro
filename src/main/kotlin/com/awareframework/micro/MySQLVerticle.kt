@@ -218,7 +218,7 @@ class MySQLVerticle : AbstractVerticle() {
    * Insert batch of data into database table
    */
   fun insertData(table: String, device_id: String, data: JsonArray) {
-    if (data.size() <= 0) {
+    if (data.isEmpty()) {
       return
     }
 
