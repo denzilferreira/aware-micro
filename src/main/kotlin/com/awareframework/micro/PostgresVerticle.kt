@@ -274,10 +274,14 @@ class PostgresVerticle : AbstractVerticle() {
       }
       "prefer", "preferred" -> {
         options.setSslMode(SslMode.PREFER)
-        options.setPemTrustOptions(PemTrustOptions().addCertPath(serverConfig.getString("database_ssl_path_ca_cert_pem")))
-        options.setPemKeyCertOptions(PemKeyCertOptions()
-          .setKeyPath(serverConfig.getString("database_ssl_path_client_key_pem"))
-          .setCertPath(serverConfig.getString("database_ssl_path_client_cert_pem")))
+        if (serverConfig.containsKey("database_ssl_path_ca_cert_pem")) {
+          options.setPemTrustOptions(PemTrustOptions().addCertPath(serverConfig.getString("database_ssl_path_ca_cert_pem")))
+          if (serverConfig.containsKey("database_ssl_path_client_key_pem")) {
+            options.setPemKeyCertOptions(PemKeyCertOptions()
+                .setKeyPath(serverConfig.getString("database_ssl_path_client_key_pem"))
+                .setCertPath(serverConfig.getString("database_ssl_path_client_cert_pem")))
+          }
+        }
       }
     }
   }
