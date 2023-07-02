@@ -225,6 +225,10 @@ class PostgresVerticle : AbstractVerticle() {
    * Insert batch of data into database table
    */
   fun insertData(table: String, device_id: String, data: JsonArray) {
+    if (data.isEmpty()) {
+      return
+    }
+
     createTable(table)
       .onSuccess { _ ->
         sqlClient.getConnection { connectionResult ->
