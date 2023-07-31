@@ -1,5 +1,6 @@
 package com.awareframework.micro
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
@@ -10,6 +11,8 @@ import io.vertx.core.json.JsonObject
 import java.net.URL
 
 class WebsocketVerticle : AbstractVerticle() {
+
+  private val logger = KotlinLogging.logger {}
 
   private lateinit var parameters: JsonObject
   private lateinit var websocket : ServerWebSocket
@@ -37,11 +40,11 @@ class WebsocketVerticle : AbstractVerticle() {
         vertx.createHttpServer()
           .webSocketHandler { server ->
             server.handler {
-              println("Websocket connected")
+              logger.info { "Websocket connected" }
             }
 
             server.closeHandler {
-              println("Websocket connection closed")
+              logger.info { "Websocket connection closed" }
             }
 
             server.textMessageHandler { message ->
@@ -52,9 +55,9 @@ class WebsocketVerticle : AbstractVerticle() {
           }
           .listen(getExternalWebSocketServerPort(serverConfig)) {
             if (it.failed()) {
-              println("Failed to initialise websocket server ${it.cause().message}")
+              logger.error(it.cause()) { "Failed to initialise websocket server." }
             } else {
-              println("AWARE Micro Websocket server: ws://${getExternalWebSocketServerHost(serverConfig)}:${getExternalWebSocketServerPort(serverConfig)}")
+              logger.info { "AWARE Micro Websocket server: ws://${getExternalWebSocketServerHost(serverConfig)}:${getExternalWebSocketServerPort(serverConfig)}" }
             }
           }
       }

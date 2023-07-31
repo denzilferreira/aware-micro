@@ -1,6 +1,7 @@
 package com.awareframework.micro
 
 import com.mitchellbosecke.pebble.PebbleEngine
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
@@ -28,12 +29,14 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 class MainVerticle : AbstractVerticle() {
 
+  private val logger = KotlinLogging.logger {}
+
   private lateinit var parameters: JsonObject
   private lateinit var httpServer: HttpServer
 
   override fun start(startPromise: Promise<Void>) {
 
-    println("AWARE Micro initializing...")
+    logger.info { "AWARE Micro initializing..." }
 
     val serverOptions = HttpServerOptions()
     val pebbleEngine = PebbleTemplateEngine.create(vertx, PebbleEngine.Builder().cacheActive(false).build())
@@ -43,7 +46,7 @@ class MainVerticle : AbstractVerticle() {
     router.route().handler(BodyHandler.create())
     router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
-      println("Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()} with the following data ${it.request().params().toList()}")
+      logger.info { "Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()} with the following data ${it.request().params().toList()}" }
       it.next()
     }
 
@@ -79,7 +82,7 @@ class MainVerticle : AbstractVerticle() {
             )
           ) {
             vertx.fileSystem().delete("./cache/qrcode.png") {
-              if (it.succeeded()) println("Cleared old qrcode...")
+              if (it.succeeded()) logger.info { "Cleared old qrcode..." }
             }
             vertx.fileSystem().open(
               "./cache/qrcode.png",
@@ -100,7 +103,7 @@ class MainVerticle : AbstractVerticle() {
                     "study_number"
                   )}/${study.getString("study_key")}"
 
-                println("URL encoded for the QRCode is: $serverURL")
+                logger.info { "URL encoded for the QRCode is: $serverURL" }
 
                 client.get(
                   443, "chart.googleapis.com",
@@ -116,7 +119,7 @@ class MainVerticle : AbstractVerticle() {
                         }
                       }
                     } else {
-                      println("QRCode creation failed: ${request.cause().message}")
+                      logger.error(request.cause()) { "QRCode creation failed." }
                     }
                   }
               }
@@ -146,7 +149,7 @@ class MainVerticle : AbstractVerticle() {
               route.response().end(JsonArray().add(status).encode())
               route.next()
             } else {
-              println("Study configuration: ${getStudyConfig().encodePrettily()}")
+              logger.info { "Study configuration: ${getStudyConfig().encodePrettily()}" }
               route.response().end(getStudyConfig().encode())
             }
           } else {
@@ -283,17 +286,17 @@ class MainVerticle : AbstractVerticle() {
                   vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
                 }
                 else -> {
-                  println("Not storing data into a database engine: mysql, postgres")
+                  logger.info { "Not storing data into a database engine: mysql, postgres" }
                 }
               }
 
               vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
 
-              println("AWARE Micro API at ${getExternalServerHost(serverConfig)}:${getExternalServerPort(serverConfig)}")
-              println("Serving study config: ${getStudyConfig()}")
+              logger.info { "AWARE Micro API at ${getExternalServerHost(serverConfig)}:${getExternalServerPort(serverConfig)}" }
+              logger.info { "Serving study config: ${getStudyConfig()}" }
               startPromise.complete()
             } else {
-              println("AWARE Micro initialisation failed! Because: ${server.cause()}")
+              logger.error(server.cause()) { "AWARE Micro initialisation failed!" }
               startPromise.fail(server.cause())
             }
           }
@@ -329,17 +332,17 @@ class MainVerticle : AbstractVerticle() {
                     vertx.deployVerticle("com.awareframework.micro.PostgresVerticle")
                   }
                   else -> {
-                    println("Not storing data into a database engine: mysql, postgres")
+                    logger.info { "Not storing data into a database engine: mysql, postgres" }
                   }
                 }
 
                 vertx.undeploy("com.awareframework.micro.WebsocketVerticle")
                 vertx.deployVerticle("com.awareframework.micro.WebsocketVerticle")
 
-                println("AWARE Micro API at ${getExternalServerHost(newServerConfig)}:${getExternalServerPort(newServerConfig)}")
+                logger.info { "AWARE Micro API at ${getExternalServerHost(newServerConfig)}:${getExternalServerPort(newServerConfig)}" }
 
               } else {
-                println("AWARE Micro initialisation failed! Because: ${server.cause()}")
+                logger.error(server.cause()) { "AWARE Micro initialisation failed!" }
               }
             }
         }
@@ -413,9 +416,9 @@ class MainVerticle : AbstractVerticle() {
 
         vertx.fileSystem().writeFile("./aware-config.json", Buffer.buffer(configFile.encodePrettily())) { result ->
           if (result.succeeded()) {
-            println("You can now configure your server by editing the aware-config.json that was automatically created. You can now stop this instance (press Ctrl+C)")
+            logger.info { "You can now configure your server by editing the aware-config.json that was automatically created. You can now stop this instance (press Ctrl+C)" }
           } else {
-            println("Failed to create aware-config.json: ${result.cause()}")
+            logger.error(result.cause()) { "Failed to create aware-config.json." }
           }
         }
       }
@@ -565,7 +568,7 @@ class MainVerticle : AbstractVerticle() {
 
     vertx.fileSystem().mkdir("./cache") { cacheFolder ->
       if (cacheFolder.succeeded()) {
-        println("Created cache folder")
+        logger.info { "Created cache folder" }
       }
     }
 
@@ -574,7 +577,7 @@ class MainVerticle : AbstractVerticle() {
         vertx.fileSystem().open("./cache/$icon.png", OpenOptions().setCreate(true).setWrite(true)) { writeFile ->
           if (writeFile.succeeded()) {
 
-            println("Downloading $icon.png")
+            logger.info { "Downloading $icon.png" }
 
             val asyncFile = writeFile.result()
             val webClientOptions = WebClientOptions()
@@ -590,11 +593,11 @@ class MainVerticle : AbstractVerticle() {
               .send { request ->
                 if (request.succeeded()) {
                   val iconFile = request.result()
-                  println("Cached $icon.png: ${iconFile.statusCode() == 200}")
+                  logger.info { "Cached $icon.png: ${iconFile.statusCode() == 200}" }
                 }
               }
           } else {
-            println("Unable to create file: ${writeFile.cause()}")
+            logger.error(writeFile.cause()) { "Unable to create file." }
           }
         }
       }
