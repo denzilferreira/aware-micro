@@ -199,25 +199,32 @@ class PostgresVerticle : AbstractVerticle() {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
         val connect = connectionResult.result()
-        connect.query("CREATE TABLE IF NOT EXISTS \"$table\" (\"_id\" SERIAL PRIMARY KEY, \"timestamp\" DOUBLE PRECISION NOT NULL, \"device_id\" UUID NOT NULL, \"data\" JSONB NOT NULL)")
+        val queryCreateTable = "CREATE TABLE IF NOT EXISTS \"$table\" (\"_id\" SERIAL PRIMARY KEY, \"timestamp\" DOUBLE PRECISION NOT NULL, \"device_id\" UUID NOT NULL, \"data\" JSONB NOT NULL)"
+        connect.query(queryCreateTable)
           .execute()
           .onFailure { e ->
+            logger.error(e) { "Failed in: $queryCreateTable" }
             promise.fail(e.message)
             connect.close()
           }
           .onSuccess { _ ->
-            connect.query("CREATE INDEX IF NOT EXISTS \"${table}_timestamp_device\" ON \"$table\" (\"timestamp\", \"device_id\")")
+            logger.debug { "Created table \"$table\" successfully: $queryCreateTable" }
+            val queryCreateIndex = "CREATE INDEX IF NOT EXISTS \"${table}_timestamp_device\" ON \"$table\" (\"timestamp\", \"device_id\")"
+            connect.query(queryCreateIndex)
               .execute()
               .onFailure { e2 ->
+                logger.error(e2) { "Failed in: $queryCreateIndex" }
                 promise.fail(e2.message)
                 connect.close()
               }
               .onSuccess { _ ->
+                logger.debug { "Created index for \"$table\" successfully: $queryCreateIndex" }
                 promise.complete(true)
                 connect.close()
               }
           }
       } else {
+        logger.error(connectionResult.cause()) { "Failed to connect to database for creating a table." }
         promise.fail(connectionResult.cause().message)
       }
     }
@@ -263,7 +270,7 @@ class PostgresVerticle : AbstractVerticle() {
         }
       }
       .onFailure { e ->
-        logger.error(e) {}
+        logger.error(e) { "Failed to create table." }
       }
   }
 

@@ -200,17 +200,21 @@ class MySQLVerticle : AbstractVerticle() {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
         val connect = connectionResult.result()
-        connect.query("CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))")
+        val queryCreateTable = "CREATE TABLE IF NOT EXISTS `$table` (`_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `timestamp` DOUBLE NOT NULL, `device_id` VARCHAR(128) NOT NULL, `data` JSON NOT NULL, INDEX `timestamp_device` (`timestamp`, `device_id`))"
+        connect.query(queryCreateTable)
           .execute()
           .onFailure { e ->
+            logger.error(e) { "Failed in: $queryCreateTable" }
             promise.fail(e.message)
             connect.close()
           }
           .onSuccess { _ ->
+            logger.debug { "Created table \"$table\" successfully: $queryCreateTable" }
             promise.complete(true)
             connect.close()
           }
       } else {
+        logger.error(connectionResult.cause()) { "Failed to connect to database for creating a table." }
         promise.fail(connectionResult.cause().message)
       }
     }
@@ -255,7 +259,7 @@ class MySQLVerticle : AbstractVerticle() {
         }
       }
       .onFailure { e ->
-        logger.error(e) {}
+        logger.error(e) { "Failed to create table." }
       }
   }
 
