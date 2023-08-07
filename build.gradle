@@ -44,7 +44,7 @@ dependencies {
   implementation "io.vertx:vertx-web-templ-pebble"
 
   // For SCRAM-SHA-256 passwords in PostgreSQL.
-  implementation "com.ongres.scram:common:2.1"
+  implementation "com.ongres.scram:client:2.1"
 
   implementation "io.github.oshai:kotlin-logging-jvm:5.0.1"
   implementation "org.slf4j:slf4j-api:2.0.7"

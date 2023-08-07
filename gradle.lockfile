@@ -7,6 +7,7 @@ ch.randelshofer:fastdoubleparser:0.8.0=compileClasspath,runtimeClasspath
 com.fasterxml.jackson.core:jackson-core:2.15.0=compileClasspath,runtimeClasspath
 com.fasterxml.jackson:jackson-bom:2.15.0=compileClasspath,runtimeClasspath
 com.hazelcast:hazelcast:4.2.8=compileClasspath,runtimeClasspath
+com.ongres.scram:client:2.1=compileClasspath,runtimeClasspath
 com.ongres.scram:common:2.1=compileClasspath,runtimeClasspath
 com.ongres.stringprep:saslprep:1.1=compileClasspath,runtimeClasspath
 com.ongres.stringprep:stringprep:1.1=compileClasspath,runtimeClasspath
