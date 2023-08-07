@@ -26,7 +26,7 @@ def watchForChange = 'src/main/kotlin/**/*'
 def doOnChange = './gradlew classes'
 
 dependencies {
-  implementation platform("io.vertx:vertx-stack-depchain:4.3.4")  // Vert.x version
+  implementation platform("io.vertx:vertx-stack-depchain:4.4.4")  // Vert.x version
 
   implementation "io.vertx:vertx-core"
   implementation "io.vertx:vertx-config"
