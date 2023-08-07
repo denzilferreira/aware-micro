@@ -1,6 +1,7 @@
 package com.awareframework.micro
 
 import org.apache.commons.lang.StringEscapeUtils
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.vertx.config.ConfigRetriever
 import io.vertx.config.ConfigRetrieverOptions
 import io.vertx.config.ConfigStoreOptions
@@ -20,6 +21,8 @@ import java.util.stream.Collectors
 import java.util.stream.StreamSupport
 
 class PostgresVerticle : AbstractVerticle() {
+
+  private val logger = KotlinLogging.logger {}
 
   private lateinit var parameters: JsonObject
   private lateinit var sqlClient: PgPool
@@ -114,12 +117,12 @@ class PostgresVerticle : AbstractVerticle() {
           .query("SELECT * FROM \"$table\" WHERE \"device_id\" = '$device_id' AND \"timestamp\" between $start AND $end ORDER BY \"timestamp\" ASC")
           .execute()
           .onFailure { e ->
-            println("Failed to retrieve data: ${e.message}")
+            logger.error(e) { "Failed to retrieve data." }
             connection.close()
             dataPromise.fail(e.message)
           }
           .onSuccess { rows ->
-            println("$device_id : retrieved ${rows.size()} records from $table")
+            logger.info { "$device_id : retrieved ${rows.size()} records from $table" }
             connection.close()
             dataPromise.complete(JsonArray(StreamSupport.stream(rows.spliterator(), false)
               .map { row -> row.toJson() }
@@ -144,16 +147,16 @@ class PostgresVerticle : AbstractVerticle() {
           connection.query(updateItem)
             .execute()
             .onFailure { e ->
-              println("Failed to process update: ${e.message}")
+              logger.error(e) { "Failed to process update." }
               connection.close()
             }
             .onSuccess { _ ->
-              println("$device_id updated $table: ${entry.encode()}")
+              logger.info { "$device_id updated $table: ${entry.encode()}" }
               connection.close()
             }
         }
       } else {
-        println("Failed to establish connection: ${connectionResult.cause().message}")
+        logger.error(connectionResult.cause()) { "Failed to establish connection." }
       }
     }
   }
@@ -175,15 +178,15 @@ class PostgresVerticle : AbstractVerticle() {
         connection.query(deleteBatch)
           .execute()
           .onFailure { e ->
-            println("Failed to process delete batch: ${e.message}")
+            logger.error(e) { "Failed to process delete batch." }
             connection.close()
           }
           .onSuccess { _ ->
-            println("$device_id deleted from $table: ${data.size()} records")
+            logger.info { "$device_id deleted from $table: ${data.size()} records" }
             connection.close()
           }
       } else {
-        println("Failed to establish connection: ${connectionResult.cause().message}")
+        logger.error(connectionResult.cause()) { "Failed to establish connection." }
       }
     }
   }
@@ -196,25 +199,32 @@ class PostgresVerticle : AbstractVerticle() {
     sqlClient.getConnection { connectionResult ->
       if (connectionResult.succeeded()) {
         val connect = connectionResult.result()
-        connect.query("CREATE TABLE IF NOT EXISTS \"$table\" (\"_id\" SERIAL PRIMARY KEY, \"timestamp\" DOUBLE PRECISION NOT NULL, \"device_id\" UUID NOT NULL, \"data\" JSONB NOT NULL)")
+        val queryCreateTable = "CREATE TABLE IF NOT EXISTS \"$table\" (\"_id\" SERIAL PRIMARY KEY, \"timestamp\" DOUBLE PRECISION NOT NULL, \"device_id\" UUID NOT NULL, \"data\" JSONB NOT NULL)"
+        connect.query(queryCreateTable)
           .execute()
           .onFailure { e ->
+            logger.error(e) { "Failed in: $queryCreateTable" }
             promise.fail(e.message)
             connect.close()
           }
           .onSuccess { _ ->
-            connect.query("CREATE INDEX IF NOT EXISTS \"${table}_timestamp_device\" ON \"$table\" (\"timestamp\", \"device_id\")")
+            logger.debug { "Created table \"$table\" successfully: $queryCreateTable" }
+            val queryCreateIndex = "CREATE INDEX IF NOT EXISTS \"${table}_timestamp_device\" ON \"$table\" (\"timestamp\", \"device_id\")"
+            connect.query(queryCreateIndex)
               .execute()
               .onFailure { e2 ->
+                logger.error(e2) { "Failed in: $queryCreateIndex" }
                 promise.fail(e2.message)
                 connect.close()
               }
               .onSuccess { _ ->
+                logger.debug { "Created index for \"$table\" successfully: $queryCreateIndex" }
                 promise.complete(true)
                 connect.close()
               }
           }
       } else {
+        logger.error(connectionResult.cause()) { "Failed to connect to database for creating a table." }
         promise.fail(connectionResult.cause().message)
       }
     }
@@ -249,24 +259,24 @@ class PostgresVerticle : AbstractVerticle() {
             connection.query(insertBatch)
               .execute()
               .onFailure { e ->
-                println("Failed to process batch: ${e.message}")
+                logger.error(e) { "Failed to process batch." }
                 connection.close()
               }
               .onSuccess { _ ->
-                println("$device_id inserted to $table: $rows records")
+                logger.info { "$device_id inserted to $table: $rows records" }
                 connection.close()
               }
           }
         }
       }
       .onFailure { e ->
-        println(e.message)
+        logger.error(e) { "Failed to create table." }
       }
   }
 
   override fun stop() {
     super.stop()
-    println("AWARE Micro: PostgreSQL client shutdown")
+    logger.info { "AWARE Micro: PostgreSQL client shutdown" }
     sqlClient.close()
   }
 
