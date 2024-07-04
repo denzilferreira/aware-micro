@@ -106,8 +106,8 @@ class MainVerticle : AbstractVerticle() {
                 logger.info { "URL encoded for the QRCode is: $serverURL" }
 
                 client.get(
-                  443, "chart.googleapis.com",
-                  "/chart?chs=300x300&cht=qr&chl=$serverURL&choe=UTF-8"
+                  443, "qrcode.tec-it.com",
+                  "/API/QRCode?size=small&data=$serverURL"
                 )
                   .`as`(BodyCodec.pipe(asyncQrcode, true))
                   .send { request ->
