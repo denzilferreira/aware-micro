@@ -38,12 +38,12 @@ class MainVerticle : AbstractVerticle() {
 
     logger.info { "AWARE Micro initializing..." }
 
-    val serverOptions = HttpServerOptions()
+    val serverOptions = HttpServerOptions().setMaxWebSocketMessageSize(1024 * 1024 * 20).setMaxChunkSize(1024 * 1024 * 50).setMaxInitialLineLength(1024 * 1024 * 50).setMaxHeaderSize(1024 * 1024 * 50); 
     val pebbleEngine = PebbleTemplateEngine.create(vertx, PebbleEngine.Builder().cacheActive(false).build())
     val eventBus = vertx.eventBus()
 
     val router = Router.router(vertx)
-    router.route().handler(BodyHandler.create())
+    router.route().handler(BodyHandler.create().setBodyLimit(1024 * 1024 * 50));
     router.route("/cache/*").handler(StaticHandler.create("cache"))
     router.route().handler {
       logger.info { "Processing ${it.request().scheme()} ${it.request().method()} : ${it.request().path()} with the following data ${it.request().params().toList()}" }
