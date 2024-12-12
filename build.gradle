@@ -1,7 +1,7 @@
 plugins {
   id 'application'
   id 'org.jetbrains.kotlin.jvm' version '1.7.20'  // Kotlin version
-  id 'com.github.johnrengelman.shadow' version '7.1.2'
+  id 'com.gradleup.shadow' version '8.3.5'
 }
 
 group = 'com.awareframework'
@@ -73,7 +73,7 @@ jar {
 }
 
 shadowJar {
-  classifier = 'fat'
+  archiveClassifier = 'fat'
   manifest {
     attributes 'Main-Verticle': mainVerticleName
   }
